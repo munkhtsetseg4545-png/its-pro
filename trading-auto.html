@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITS Pro — Auto Data</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080F1A; --bg2: #0D1826; --bgc: #111D2E; --bgc2: #0A1520;
+  --gold: #C8A020; --gold2: #8A6D10; --goldl: #E8C040;
+  --green: #00D68F; --greend: #005C3A;
+  --yellow: #FFD166; --yellowd: #6B5200;
+  --red: #FF4060; --redd: #6B0018;
+  --blue: #2D7DD2; --blued: #0D2D52;
+  --txt: #D8E4F0; --txt2: #7A98B8; --txt3: #3A5068;
+  --brd: #1A2E42; --brd2: #243A52;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Rajdhani', sans-serif;
+  --body: 'Exo 2', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--body); background:var(--bg); color:var(--txt); min-height:100vh; font-size:13px; overflow-x:hidden; }
+body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(200,160,32,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(200,160,32,.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+
+/* ── HEADER ── */
+.header { position:sticky; top:0; z-index:100; background:rgba(8,15,26,.97); border-bottom:1px solid var(--brd2); padding:8px 16px; backdrop-filter:blur(10px); }
+.header-top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.brand { font-family:var(--head); font-size:18px; font-weight:700; color:var(--gold); letter-spacing:2px; white-space:nowrap; }
+.brand span { color:var(--txt2); font-weight:400; }
+.ticker-wrap { display:flex; align-items:center; gap:6px; background:var(--bgc); border:1px solid var(--brd2); padding:4px 10px; border-radius:4px; }
+.ticker-wrap label { font-family:var(--mono); font-size:10px; color:var(--txt3); }
+#h-ticker { background:transparent; border:none; outline:none; color:var(--gold); font-family:var(--mono); font-size:15px; font-weight:bold; width:90px; text-transform:uppercase; }
+.btn-fetch { font-family:var(--head); font-size:11px; font-weight:700; letter-spacing:1px; padding:5px 14px; border-radius:4px; border:1px solid var(--gold); background:var(--bgc2); color:var(--gold); cursor:pointer; transition:all .2s; }
+.btn-fetch:hover { background:var(--gold); color:var(--bg); }
+.btn-fetch.loading { border-color:var(--yellow); color:var(--yellow); animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.badges { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.badge { font-family:var(--mono); font-size:10px; padding:3px 8px; border-radius:3px; border:1px solid; white-space:nowrap; }
+.b-score { border-color:var(--gold); color:var(--gold); background:var(--bgc2); }
+.b-bull { border-color:var(--green); color:var(--green); background:var(--greend); }
+.b-neutral { border-color:var(--yellow); color:var(--yellow); background:var(--yellowd); }
+.b-bear { border-color:var(--red); color:var(--red); background:var(--redd); }
+.b-live { border-color:var(--green); color:var(--green); background:var(--greend); animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.6} }
+.prog-wrap { margin-top:6px; display:flex; align-items:center; gap:8px; }
+.prog-bg { flex:1; height:3px; background:var(--bgc); border-radius:2px; overflow:hidden; }
+.prog-fill { height:100%; background:linear-gradient(90deg,var(--gold2),var(--gold)); border-radius:2px; transition:width .5s; }
+.prog-lbl { font-family:var(--mono); font-size:10px; color:var(--txt3); }
+
+/* ── DATA PANEL ── */
+.data-panel { background:var(--bgc); border:1px solid var(--brd2); border-radius:6px; margin:12px 16px 0; padding:12px 16px; display:none; position:relative; z-index:1; }
+.data-panel.visible { display:block; }
+.data-panel-title { font-family:var(--head); font-size:11px; letter-spacing:2px; color:var(--gold); text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.data-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+.data-cell { background:var(--bgc2); border:1px solid var(--brd); border-radius:4px; padding:8px 10px; }
+.data-cell-lbl { font-family:var(--head); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--txt3); margin-bottom:3px; }
+.data-cell-val { font-family:var(--mono); font-size:15px; font-weight:bold; color:var(--green); }
+.data-cell-val.warn { color:var(--yellow); }
+.data-cell-val.danger { color:var(--red); }
+.data-cell-sub { font-family:var(--mono); font-size:9px; color:var(--txt3); margin-top:2px; }
+
+/* AUTO-FILL INDICATOR */
+.auto-tag { font-family:var(--mono); font-size:9px; padding:1px 5px; border-radius:2px; border:1px solid var(--green); color:var(--green); background:rgba(0,214,143,.08); margin-left:6px; }
+
+/* ── TABS ── */
+.tabs-nav { display:flex; overflow-x:auto; background:var(--bg2); border-bottom:1px solid var(--brd); padding:0 16px; scrollbar-width:none; position:sticky; top:88px; z-index:99; }
+.tabs-nav::-webkit-scrollbar { display:none; }
+.tab-btn { font-family:var(--head); font-size:11px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--txt3); background:none; border:none; border-bottom:2px solid transparent; padding:10px 14px; cursor:pointer; white-space:nowrap; transition:all .2s; }
+.tab-btn:hover { color:var(--txt2); }
+.tab-btn.active { color:var(--gold); border-bottom-color:var(--gold); }
+.tab-btn .sn { font-family:var(--mono); font-size:9px; opacity:.6; margin-right:4px; }
+.tab-content { display:none; padding:16px; max-width:1200px; margin:0 auto; position:relative; z-index:1; }
+.tab-content.active { display:block; }
+
+/* ── CARDS ── */
+.card { background:var(--bgc); border:1px solid var(--brd); border-radius:6px; padding:14px; margin-bottom:12px; }
+.card-hd { font-family:var(--head); font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--gold); margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--brd); display:flex; align-items:center; justify-content:space-between; }
+.g2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+@media(max-width:768px){.g2,.g3{grid-template-columns:1fr}}
+
+/* ── RADIO ROWS ── */
+.rrow { display:flex; align-items:flex-start; gap:8px; padding:7px 0; border-bottom:1px solid rgba(26,46,66,.5); flex-wrap:wrap; }
+.rrow:last-child { border-bottom:none; }
+.rlbl { font-size:11px; font-weight:600; color:var(--txt2); min-width:155px; flex-shrink:0; padding-top:3px; font-family:var(--head); letter-spacing:.5px; display:flex; align-items:center; }
+.ropts { display:flex; flex-wrap:wrap; gap:5px; }
+.ropt { display:inline-flex; align-items:center; gap:4px; }
+.ropt input[type=radio] { display:none; }
+.ropt label { font-family:var(--mono); font-size:10px; padding:3px 8px; border-radius:3px; border:1px solid var(--brd2); background:var(--bgc2); color:var(--txt3); cursor:pointer; transition:all .15s; white-space:nowrap; }
+.ropt input:checked+label { border-color:var(--gold); color:var(--gold); background:rgba(200,160,32,.12); }
+.ropt.g input:checked+label { border-color:var(--green); color:var(--green); background:rgba(0,214,143,.12); }
+.ropt.y input:checked+label { border-color:var(--yellow); color:var(--yellow); background:rgba(255,209,102,.12); }
+.ropt.r input:checked+label { border-color:var(--red); color:var(--red); background:rgba(255,64,96,.12); }
+/* auto-selected glow */
+.ropt input.auto-selected+label { box-shadow:0 0 8px rgba(0,214,143,.4); }
+
+/* ── SCORE BOX ── */
+.sbox { display:flex; align-items:center; justify-content:center; flex-direction:column; background:var(--bgc2); border:1px solid var(--brd2); border-radius:6px; padding:16px; text-align:center; }
+.snum { font-family:var(--mono); font-size:36px; font-weight:bold; color:var(--gold); line-height:1; }
+.sdenom { font-family:var(--mono); font-size:14px; color:var(--txt3); }
+.slbl { font-family:var(--head); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--txt2); margin-top:4px; }
+
+/* ── BANNERS ── */
+.banner { border-radius:5px; padding:10px 14px; margin-bottom:10px; font-family:var(--head); font-size:12px; font-weight:600; letter-spacing:1px; display:none; align-items:center; gap:8px; }
+.banner.vis { display:flex; }
+.b-r { background:rgba(255,64,96,.15); border:1px solid var(--red); color:var(--red); }
+.b-g { background:rgba(0,214,143,.12); border:1px solid var(--green); color:var(--green); }
+.b-y { background:rgba(255,209,102,.12); border:1px solid var(--yellow); color:var(--yellow); }
+
+/* ── INPUTS ── */
+.inp { background:var(--bgc2); border:1px solid var(--brd2); border-radius:4px; padding:6px 10px; color:var(--txt); font-family:var(--mono); font-size:12px; outline:none; width:100%; transition:border-color .2s; }
+.inp:focus { border-color:var(--gold); }
+.inp.auto-filled { border-color:var(--green); background:rgba(0,214,143,.06); }
+.irow { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.ilbl { font-family:var(--head); font-size:11px; font-weight:600; color:var(--txt2); min-width:140px; flex-shrink:0; }
+.ival { font-family:var(--mono); font-size:12px; color:var(--green); padding:6px 10px; background:var(--bgc2); border:1px solid var(--brd); border-radius:4px; min-width:100px; }
+select.inp { -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237A98B8'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; padding-right:24px; }
+
+/* ── BUTTONS ── */
+.btn { font-family:var(--head); font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; padding:7px 16px; border-radius:4px; border:1px solid; cursor:pointer; transition:all .2s; }
+.btn-gold { background:var(--bgc2); border-color:var(--gold); color:var(--gold); }
+.btn-gold:hover { background:var(--gold); color:var(--bg); }
+.btn-red { background:var(--bgc2); border-color:var(--red); color:var(--red); }
+.btn-red:hover { background:var(--red); color:var(--bg); }
+.btn-green { background:var(--bgc2); border-color:var(--green); color:var(--green); }
+.btn-green:hover { background:var(--green); color:var(--bg); }
+.btn-sm { font-size:10px; padding:4px 10px; }
+
+/* ── TABLES ── */
+.ttbl { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+.ttbl th { font-family:var(--head); font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--txt3); padding:6px 8px; border-bottom:1px solid var(--brd); text-align:left; }
+.ttbl td { padding:6px 8px; border-bottom:1px solid rgba(26,46,66,.4); color:var(--txt); }
+.ttbl td input[type=number] { background:transparent; border:1px solid var(--brd2); border-radius:3px; padding:3px 6px; color:var(--txt); font-family:var(--mono); font-size:11px; outline:none; width:80px; }
+.ttbl td input:focus { border-color:var(--gold); }
+.t1c { color:var(--gold); font-weight:bold; }
+.t2c { color:var(--blue); }
+
+/* ── CALC ── */
+.cgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(155px,1fr)); gap:8px; margin-top:12px; }
+.citem { background:var(--bgc2); border:1px solid var(--brd); border-radius:4px; padding:10px; }
+.clbl { font-family:var(--head); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--txt3); margin-bottom:4px; }
+.cval { font-family:var(--mono); font-size:16px; font-weight:bold; color:var(--green); }
+.cval.warn { color:var(--yellow); }
+.cval.danger { color:var(--red); }
+
+/* ── WATCHLIST ── */
+.witem { background:var(--bgc2); border:1px solid var(--brd); border-radius:6px; padding:12px; margin-bottom:10px; position:relative; }
+.wticker { font-family:var(--mono); font-size:20px; font-weight:bold; color:var(--gold); margin-bottom:10px; }
+.wscore { position:absolute; top:12px; right:48px; font-family:var(--mono); font-size:18px; font-weight:bold; }
+.wfetch { position:absolute; top:10px; right:100px; }
+
+/* ── CHECKBOXES ── */
+.crow { display:flex; align-items:center; gap:8px; padding:5px 0; }
+.crow input[type=checkbox] { display:none; }
+.crow label { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--txt2); }
+.crow label::before { content:''; width:14px; height:14px; border:1px solid var(--brd2); border-radius:2px; background:var(--bgc2); flex-shrink:0; transition:all .2s; }
+.crow input:checked+label::before { background:var(--green); border-color:var(--green); content:'✓'; color:var(--bg); font-size:10px; display:flex; align-items:center; justify-content:center; }
+
+/* ── TF SECTIONS ── */
+.tfs { border-left:3px solid var(--gold2); padding-left:12px; margin-bottom:14px; }
+.tft { font-family:var(--mono); font-size:10px; color:var(--gold); text-transform:uppercase; letter-spacing:2px; margin-bottom:8px; }
+
+/* ── SETUP ── */
+.sresult { text-align:center; padding:14px; border-radius:6px; border:2px solid var(--txt3); color:var(--txt3); font-family:var(--head); font-size:16px; font-weight:700; letter-spacing:1px; margin-top:10px; }
+.confluencegrid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+
+/* ── PARABOLIC ── */
+.parascore { text-align:center; padding:14px; border-radius:6px; border:2px solid var(--txt3); margin-top:10px; font-family:var(--head); font-size:16px; font-weight:700; letter-spacing:1px; }
+
+/* ── JOURNAL ── */
+.emotrow { display:flex; gap:6px; flex-wrap:wrap; }
+.ebtn { padding:5px 12px; border:1px solid var(--brd2); background:var(--bgc2); color:var(--txt3); font-family:var(--head); font-size:11px; font-weight:600; border-radius:20px; cursor:pointer; transition:all .2s; }
+.ebtn.ac { border-color:var(--green); color:var(--green); background:rgba(0,214,143,.1); }
+.ebtn.af { border-color:var(--gold); color:var(--gold); background:rgba(200,160,32,.1); }
+.ebtn.fo { border-color:#FF9940; color:#FF9940; background:rgba(255,153,64,.1); }
+.ebtn.fe { border-color:var(--red); color:var(--red); background:rgba(255,64,96,.1); }
+.ebtn.ex { border-color:#40A0FF; color:#40A0FF; background:rgba(64,160,255,.1); }
+textarea.inp { resize:vertical; min-height:70px; font-family:var(--body); font-size:12px; }
+
+/* ── STATS ── */
+.sgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+.sbox2 { background:var(--bgc2); border:1px solid var(--brd); border-radius:6px; padding:12px; text-align:center; }
+.sval { font-family:var(--mono); font-size:24px; font-weight:bold; color:var(--gold); }
+.slbl2 { font-family:var(--head); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--txt3); margin-top:4px; }
+
+/* ── HISTORY ── */
+.hitem { display:grid; grid-template-columns:auto 1fr auto auto auto; gap:10px; align-items:center; padding:8px 12px; border:1px solid var(--brd); border-radius:4px; margin-bottom:6px; background:var(--bgc2); font-family:var(--mono); font-size:11px; }
+
+/* ── DIVIDER ── */
+.div { height:1px; background:linear-gradient(90deg,transparent,var(--brd2),transparent); margin:14px 0; }
+.mlbl { font-family:var(--head); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--txt3); margin-bottom:4px; }
+
+/* ── ACTIONS ── */
+.actbar { display:flex; gap:8px; padding:8px 16px; background:var(--bg2); border-top:1px solid var(--brd); position:sticky; bottom:0; z-index:98; flex-wrap:wrap; }
+
+/* ── ERROR ── */
+.err-toast { position:fixed; bottom:60px; right:16px; background:var(--bgc); border:1px solid var(--red); color:var(--red); font-family:var(--mono); font-size:11px; padding:8px 14px; border-radius:5px; z-index:999; display:none; max-width:300px; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--brd2);border-radius:3px}
+
+@media(max-width:600px){
+  .rlbl{min-width:110px}
+  .ropt label{font-size:9px;padding:2px 5px}
+  .tabs-nav{top:110px}
+}
+
+/* Loading overlay */
+.fetch-overlay { position:fixed; inset:0; background:rgba(8,15,26,.85); z-index:200; display:none; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+.fetch-overlay.vis { display:flex; }
+.fetch-spinner { width:48px; height:48px; border:3px solid var(--brd2); border-top-color:var(--gold); border-radius:50%; animation:spin 1s linear infinite; }
+@keyframes spin{to{transform:rotate(360deg)}}
+.fetch-msg { font-family:var(--mono); font-size:12px; color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="fetch-overlay" id="fetch-overlay">
+  <div class="fetch-spinner"></div>
+  <div class="fetch-msg" id="fetch-msg">Өгөгдөл татаж байна...</div>
+</div>
+
+<!-- ERROR TOAST -->
+<div class="err-toast" id="err-toast"></div>
+
+
+<!-- ══════ HEADER ══════ -->
+<div class="header">
+  <div class="header-top">
+    <div class="brand">⬡ ITS <span>Pro</span></div>
+    <div class="ticker-wrap">
+      <label>TICKER</label>
+      <input id="h-ticker" type="text" placeholder="NVDA" maxlength="6" onkeydown="if(event.key==='Enter')fetchAllData()">
+    </div>
+    <button class="btn-fetch" id="fetch-btn" onclick="fetchAllData()">⚡ AUTO FETCH</button>
+    <div class="badges">
+      <div class="badge b-score">SCORE: <span id="h-score">0</span>/70</div>
+      <div class="badge b-neutral" id="h-regime">NEUTRAL</div>
+      <div class="badge b-score" id="h-last-fetch">МЭДЭЭЛЭЛ БАЙХГҮЙ</div>
+      <div class="badge b-score">STEP: <span id="h-step">1</span>/8</div>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-lbl">PROGRESS</div>
+    <div class="prog-bg"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-lbl"><span id="h-pct">0</span>%</div>
+  </div>
+</div>
+
+<!-- DATA PANEL -->
+<div class="data-panel" id="data-panel">
+  <div class="data-panel-title">
+    📡 REAL-TIME ӨГӨГДӨЛ
+    <span id="data-live-badge" class="badge b-live" style="display:none;">● LIVE</span>
+  </div>
+  <div class="data-grid" id="data-grid"></div>
+</div>
+
+<!-- ══════ TABS ══════ -->
+<nav class="tabs-nav">
+  <button class="tab-btn active" onclick="switchTab(1,this)"><span class="sn">01</span>REGIME</button>
+  <button class="tab-btn" onclick="switchTab(2,this)"><span class="sn">02</span>WATCHLIST</button>
+  <button class="tab-btn" onclick="switchTab(3,this)"><span class="sn">03</span>SETUP</button>
+  <button class="tab-btn" onclick="switchTab(4,this)"><span class="sn">04</span>TIMEFRAME</button>
+  <button class="tab-btn" onclick="switchTab(5,this)"><span class="sn">05</span>POSITION</button>
+  <button class="tab-btn" onclick="switchTab(6,this)"><span class="sn">06</span>ENTRY</button>
+  <button class="tab-btn" onclick="switchTab(7,this)"><span class="sn">07</span>EXIT</button>
+  <button class="tab-btn" onclick="switchTab(8,this)"><span class="sn">08</span>JOURNAL</button>
+</nav>
+
+<!-- ══════ TAB 1: MARKET REGIME ══════ -->
+<div class="tab-content active" id="tab-1">
+  <div id="bear-banner" class="banner b-r">⚠ BEAR MARKET — Position trading хязгаарлагдана!</div>
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">📊 ИНДЕКС & ЗАХ ЗЭЭЛ <span id="r-auto-tag"></span></div>
+        <div class="rrow">
+          <div class="rlbl">S&P500 / Nasdaq</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_idx" value="2" id="ri1"><label for="ri1">200 EMA дээр ✅✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_idx" value="1" id="ri2"><label for="ri2">50-200 хооронд ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_idx" value="0" id="ri3"><label for="ri3">200 EMA доор ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">VIX <span id="vix-live" style="font-family:var(--mono);font-size:10px;color:var(--green);margin-left:4px;"></span></div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_vix" value="2" id="rv1"><label for="rv1">&lt;15 Тайван ✅</label></div>
+            <div class="ropt"><input type="radio" name="r_vix" value="1" id="rv2"><label for="rv2">15-25 Хэвийн</label></div>
+            <div class="ropt y"><input type="radio" name="r_vix" value="0.5" id="rv3"><label for="rv3">25-35 ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_vix" value="0" id="rv4"><label for="rv4">&gt;35 Аюул ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Advance/Decline</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_ad" value="1" id="ra1"><label for="ra1">Өсч байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_ad" value="0.5" id="ra2"><label for="ra2">Хэвтээ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_ad" value="0" id="ra3"><label for="ra3">Буурч байна ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">200 EMA дээрх %</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_pct" value="2" id="rp1"><label for="rp1">&gt;80% ✅✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_pct" value="1" id="rp2"><label for="rp2">50-80% ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_pct" value="0" id="rp3"><label for="rp3">&lt;50% ❌</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🏛 МАКРО ОРЧИН</div>
+        <div class="rrow">
+          <div class="rlbl">Fed горим</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_fed" value="1" id="rf1"><label for="rf1">Хүү бууруулж байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_fed" value="0.5" id="rf2"><label for="rf2">Хэвээр ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_fed" value="0" id="rf3"><label for="rf3">Хүү өсгөж байна ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Yield Curve</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_yc" value="1" id="ry1"><label for="ry1">Хэвийн ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_yc" value="0.5" id="ry2"><label for="ry2">Хавтгай ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_yc" value="0" id="ry3"><label for="ry3">Урвуу ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Зах зээлийн мөчлөг</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_cyc" value="2" id="rc1"><label for="rc1">Early Bull ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="r_cyc" value="1.5" id="rc2"><label for="rc2">Mid Bull ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_cyc" value="0.5" id="rc3"><label for="rc3">Late Bull ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_cyc" value="0" id="rc4"><label for="rc4">Bear ❌</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">🔬 SECTOR & АРИЛЖАА</div>
+        <div class="rrow">
+          <div class="rlbl">Sector тэргүүлэгч</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_sec" value="1" id="rs1"><label for="rs1">Tech/Growth ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_sec" value="0.5" id="rs2"><label for="rs2">Defensive ⚠️</label></div>
+            <div class="ropt"><input type="radio" name="r_sec" value="0.5" id="rs3"><label for="rs3">Energy</label></div>
+            <div class="ropt"><input type="radio" name="r_sec" value="0.5" id="rs4"><label for="rs4">Financial</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Миний sector</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_ms" value="2" id="rms1"><label for="rms1">Тэргүүлэгч ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="r_ms" value="1.5" id="rms2"><label for="rms2">2-3-р байр ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_ms" value="0.5" id="rms3"><label for="rms3">Дунд ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_ms" value="0" id="rms4"><label for="rms4">Сул ❌</label></div>
+          </div>
+        </div>
+        <div class="div"></div>
+        <div class="rrow">
+          <div class="rlbl">Арилжааны төрөл</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_type" value="position" id="rt1"><label for="rt1">Position 3-6 сар ✅</label></div>
+            <div class="ropt"><input type="radio" name="r_type" value="swing" id="rt2"><label for="rt2">Swing 2-8 долоо хоног</label></div>
+            <div class="ropt y"><input type="radio" name="r_type" value="hybrid" id="rt3"><label for="rt3">Hybrid</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">📈 REGIME SCORE</div>
+        <div class="sbox">
+          <div class="snum" id="rscore">0</div>
+          <div class="sdenom">/ 10</div>
+          <div class="slbl">Market Regime Score</div>
+        </div>
+        <div id="rverdict" class="banner b-y vis" style="margin-top:10px;">⚠️ Зах зээл нейтрал — Болгоомжтой</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 2: WATCHLIST ══════ -->
+<div class="tab-content" id="tab-2">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+    <input class="inp" id="new-ticker" placeholder="Ticker нэмэх (NVDA)" maxlength="6" style="width:200px;text-transform:uppercase;" onkeydown="if(event.key==='Enter')addWatch()">
+    <button class="btn btn-gold" onclick="addWatch()">+ НЭМЭХ</button>
+    <button class="btn btn-green btn-sm" onclick="fetchAllWatchlist()">⚡ БҮГДИЙГ ШИНЭЧЛЭХ</button>
+    <div class="badge b-score">НИЙТ: <span id="wcount">0</span>/10</div>
+  </div>
+  <div id="wlist"></div>
+</div>
+
+<!-- ══════ TAB 3: SETUP ══════ -->
+<div class="tab-content" id="tab-3">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">🏗 BASE ШИНЖИЛГЭЭ <span id="setup-auto-tag"></span></div>
+        <div class="rrow">
+          <div class="rlbl">Base төрөл</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_base" value="2" id="sb1"><label for="sb1">Cup&Handle ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="2" id="sb2"><label for="sb2">VCP ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="1" id="sb3"><label for="sb3">Flat Base ✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="1" id="sb4"><label for="sb4">Double Bottom ✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="1" id="sb5"><label for="sb5">Ascending ✅</label></div>
+            <div class="ropt r"><input type="radio" name="s_base" value="0" id="sb6"><label for="sb6">Байхгүй ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Base хугацаа</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_dur" value="2" id="sd1"><label for="sd1">10+ долоо хоног ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_dur" value="1" id="sd2"><label for="sd2">5-9 долоо хоног ✅</label></div>
+            <div class="ropt r"><input type="radio" name="s_dur" value="0" id="sd3"><label for="sd3">&lt;5 ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Уналтын гүн <span id="depth-live" style="font-family:var(--mono);font-size:10px;color:var(--green);margin-left:4px;"></span></div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_dep" value="2" id="sdp1"><label for="sdp1">&lt;15% ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_dep" value="1" id="sdp2"><label for="sdp2">15-30% ✅</label></div>
+            <div class="ropt y"><input type="radio" name="s_dep" value="0.5" id="sdp3"><label for="sdp3">30-50% ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="s_dep" value="0" id="sdp4"><label for="sdp4">50%+ ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Долоо хоногийн зай</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_tight" value="2" id="st1"><label for="st1">1-3% ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_tight" value="1" id="st2"><label for="st2">3-5% ✅</label></div>
+            <div class="ropt y"><input type="radio" name="s_tight" value="0.5" id="st3"><label for="st3">5-8% ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="s_tight" value="0" id="st4"><label for="st4">8%+ ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Volume pattern</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_vol" value="2" id="sv1"><label for="sv1">Буурч байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_vol" value="1" id="sv2"><label for="sv2">Хэвийн ✅</label></div>
+            <div class="ropt r"><input type="radio" name="s_vol" value="0" id="sv3"><label for="sv3">Өндөр ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Pocket Pivot</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_pp" value="2" id="spp1"><label for="spp1">Байна ✅✅</label></div>
+            <div class="ropt"><input type="radio" name="s_pp" value="0" id="spp2"><label for="spp2">Байхгүй</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">🎯 ENTRY ZONE <span id="pivot-auto-tag"></span></div>
+        <div class="irow">
+          <div class="ilbl">Pivot Point үнэ</div>
+          <input class="inp" type="number" id="pivot-price" placeholder="0.00" style="width:130px;">
+        </div>
+        <div class="irow">
+          <div class="ilbl">Одоогийн үнэ</div>
+          <div class="ival" id="cur-price-setup">—</div>
+        </div>
+        <div class="irow">
+          <div class="ilbl">Pivot-оос зай</div>
+          <div class="ival" id="pivot-dist-val">—</div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Pivot-оос зай</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_dist" value="2" id="sdi1"><label for="sdi1">0-3% ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_dist" value="1" id="sdi2"><label for="sdi2">3-5% ✅</label></div>
+            <div class="ropt y"><input type="radio" name="s_dist" value="0.5" id="sdi3"><label for="sdi3">5%+ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="s_dist" value="0" id="sdi4"><label for="sdi4">Хожимдсон ❌</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🔗 CONFLUENCE</div>
+        <div class="confluencegrid">
+          <div class="crow"><input type="checkbox" id="cf1"><label for="cf1">Fib 38/50/61.8% давхцал</label></div>
+          <div class="crow"><input type="checkbox" id="cf2"><label for="cf2">EMA 21/50 давхцал</label></div>
+          <div class="crow"><input type="checkbox" id="cf3"><label for="cf3">S/R түвшин давхцал</label></div>
+          <div class="crow"><input type="checkbox" id="cf4"><label for="cf4">Sector хамт өсч байна</label></div>
+          <div class="crow"><input type="checkbox" id="cf5"><label for="cf5">Индекстэй нийцэж байна</label></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⭐ SETUP SCORE</div>
+        <div class="sbox"><div class="snum" id="setup-snum">0</div><div class="sdenom">/ 5</div><div class="slbl">Confluence</div></div>
+        <div id="setup-result" class="sresult">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 4: TIMEFRAME ══════ -->
+<div class="tab-content" id="tab-4">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">📅 MONTHLY & WEEKLY <span id="tf-auto-tag"></span></div>
+        <div class="tfs">
+          <div class="tft">▸ MONTHLY</div>
+          <div class="rrow"><div class="rlbl">Trend</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_mt" value="2" id="tm1"><label for="tm1">HH & HL ✅✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_mt" value="1" id="tm2"><label for="tm2">Sideways ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_mt" value="0" id="tm3"><label for="tm3">Lower highs ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">200MA</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_m2" value="1" id="tm4"><label for="tm4">Дээр ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_m2" value="0" id="tm5"><label for="tm5">Доор ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">S/R</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_ms" value="1" id="tm6"><label for="tm6">Дэмжлэг ойрхон ✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_ms" value="0.5" id="tm7"><label for="tm7">Алс ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_ms" value="0" id="tm8"><label for="tm8">Эсэргүүцэл дээр ❌</label></div>
+          </div></div>
+        </div>
+        <div class="tfs">
+          <div class="tft">▸ WEEKLY</div>
+          <div class="rrow"><div class="rlbl">10-week MA</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_w1" value="2" id="tw1"><label for="tw1">Дээр+өсч байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_w1" value="1" id="tw2"><label for="tw2">Дээр+хэвтээ ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_w1" value="0" id="tw3"><label for="tw3">Доор ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">Volume</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_wv" value="2" id="tw4"><label for="tw4">Өсөхдөө их ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_wv" value="1" id="tw5"><label for="tw5">Ойролцоо ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_wv" value="0" id="tw6"><label for="tw6">Буурахдаа их ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">RS шугам</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_wr" value="2" id="tw7"><label for="tw7">Шинэ өндөрт ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_wr" value="1" id="tw8"><label for="tw8">Өсч байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_wr" value="0.5" id="tw9"><label for="tw9">Хэвтээ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_wr" value="0" id="tw10"><label for="tw10">Буурч байна ❌</label></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">⏱ DAILY & 4H</div>
+        <div class="tfs">
+          <div class="tft">▸ DAILY</div>
+          <div class="rrow"><div class="rlbl">EMA 21</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_d2" value="2" id="td1"><label for="td1">Дээр+өсч байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_d2" value="1" id="td2"><label for="td2">Дөнгөж давсан ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_d2" value="0" id="td3"><label for="td3">Доор ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">EMA alignment</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_de" value="2" id="td4"><label for="td4">21&gt;50 ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_de" value="1" id="td5"><label for="td5">Crossover ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_de" value="0" id="td6"><label for="td6">21&lt;50 ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">Volume dry-up</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_dv" value="2" id="td7"><label for="td7">Байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_dv" value="1" id="td8"><label for="td8">Хэвийн ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_dv" value="0" id="td9"><label for="td9">Өндөр ❌</label></div>
+          </div></div>
+        </div>
+        <div class="tfs">
+          <div class="tft">▸ 4H</div>
+          <div class="rrow"><div class="rlbl">Trend</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_4t" value="2" id="t4h1"><label for="t4h1">Daily-тэй нийцсэн ✅✅</label></div>
+            <div class="ropt"><input type="radio" name="tf_4t" value="1" id="t4h2"><label for="t4h2">Neutral ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_4t" value="0" id="t4h3"><label for="t4h3">Зөрчилдсөн ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">RSI <span id="rsi-live" style="font-family:var(--mono);font-size:10px;color:var(--green);margin-left:4px;"></span></div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_4r" value="2" id="t4h4"><label for="t4h4">50+ өсч байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_4r" value="0.5" id="t4h5"><label for="t4h5">70+ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_4r" value="0" id="t4h6"><label for="t4h6">50- ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">Trigger</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_4tr" value="2" id="t4h7"><label for="t4h7">Breakout ✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_4tr" value="2" id="t4h8"><label for="t4h8">Pullback ✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_4tr" value="2" id="t4h9"><label for="t4h9">Episodic ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_4tr" value="0" id="t4h10"><label for="t4h10">Байхгүй ❌</label></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⚖️ TF ALIGNMENT</div>
+        <div class="sbox"><div class="snum" id="tf-snum">0</div><div class="sdenom">/ 20</div><div class="slbl">Timeframe Score</div></div>
+        <div class="cgrid" style="margin-top:10px;">
+          <div class="citem"><div class="clbl">Trade Type</div><div class="cval" id="tf-type" style="font-size:13px;">—</div></div>
+          <div class="citem"><div class="clbl">Alignment</div><div class="cval" id="tf-align" style="font-size:13px;">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 5: POSITION ══════ -->
+<div class="tab-content" id="tab-5">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">💰 INPUT ПАРАМЕТРҮҮД <span id="pos-auto-tag"></span></div>
+        <div class="irow"><div class="ilbl">NAV (Portfolio $)</div><input class="inp" type="number" id="ps-nav" placeholder="100000" oninput="calcPos()" style="width:140px;"></div>
+        <div class="irow"><div class="ilbl">Risk % (default 1.5%)</div><input class="inp" type="number" id="ps-risk" value="1.5" step="0.1" oninput="calcPos()" style="width:100px;"></div>
+        <div class="irow">
+          <div class="ilbl">Entry Price <span id="ep-auto" class="auto-tag" style="display:none;">AUTO</span></div>
+          <input class="inp" type="number" id="ps-entry" placeholder="0.00" oninput="calcPos()" style="width:130px;">
+        </div>
+        <div class="irow"><div class="ilbl">Stop Loss Price</div><input class="inp" type="number" id="ps-sl" placeholder="0.00" oninput="calcPos()" style="width:130px;"></div>
+        <div class="irow">
+          <div class="ilbl">ATR Value <span id="atr-auto" class="auto-tag" style="display:none;">AUTO</span></div>
+          <input class="inp" type="number" id="ps-atr" placeholder="0.00" oninput="calcPos()" style="width:130px;">
+        </div>
+        <div class="irow"><div class="ilbl">Trade Type</div>
+          <select class="inp" id="ps-type" onchange="calcPos()" style="width:160px;">
+            <option value="position">Position</option>
+            <option value="swing">Swing</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⚙️ CONVICTION</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">Setup Score</div><div class="cval" id="conv-s">0/5</div></div>
+          <div class="citem"><div class="clbl">TF Score</div><div class="cval" id="conv-tf">0/20</div></div>
+          <div class="citem"><div class="clbl">Regime Score</div><div class="cval" id="conv-r">0/10</div></div>
+          <div class="citem"><div class="clbl">Multiplier</div><div class="cval" id="conv-m" style="color:var(--gold);">1.0x</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🗂 PORTFOLIO</div>
+        <div class="rrow"><div class="rlbl">Нээлттэй позиц</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pf_o" value="ok" id="pf1"><label for="pf1">&lt;8 ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pf_o" value="warn" id="pf2"><label for="pf2">8-10 ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pf_o" value="stop" id="pf3"><label for="pf3">&gt;10 ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Cash %</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pf_c" value="ok" id="pc1"><label for="pc1">&gt;20% ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pf_c" value="warn" id="pc2"><label for="pc2">10-20% ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pf_c" value="stop" id="pc3"><label for="pc3">&lt;10% ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Сарын P&L</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pf_p" value="ok" id="pp1"><label for="pp1">Эерэг ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pf_p" value="warn" id="pp2"><label for="pp2">Тэнцвэртэй ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pf_p" value="stop" id="pp3"><label for="pp3">&gt;-5% ❌</label></div>
+        </div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">📐 ТООЦООЛОЛ</div>
+        <div id="pw-nav" class="banner b-r">⚠ NAV-ийн 10%+ — Хэт том позиц!</div>
+        <div id="pw-risk" class="banner b-r">⚠ Risk 2%+ — Дүрмийн эсрэг!</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">Max Risk $</div><div class="cval" id="r-mr">$0</div></div>
+          <div class="citem"><div class="clbl">SL Distance</div><div class="cval" id="r-sl">0%</div></div>
+          <div class="citem"><div class="clbl">Total Shares</div><div class="cval" id="r-sh">0</div></div>
+          <div class="citem"><div class="clbl">Position Value</div><div class="cval" id="r-pv">$0</div></div>
+          <div class="citem"><div class="clbl">% of NAV</div><div class="cval" id="r-np">0%</div></div>
+          <div class="citem"><div class="clbl">ATR SL (2x)</div><div class="cval" id="r-at">$0</div></div>
+        </div>
+        <div class="div"></div>
+        <div class="mlbl">R/R RATIOS</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">TP1</div><div class="cval" id="rr1" style="color:var(--yellow);">—</div></div>
+          <div class="citem"><div class="clbl">TP2</div><div class="cval" id="rr2" style="color:var(--yellow);">—</div></div>
+          <div class="citem"><div class="clbl">TP3</div><div class="cval" id="rr3" style="color:var(--yellow);">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">📊 TRANCHE</div>
+        <table class="ttbl">
+          <thead><tr><th>Tranche</th><th>%</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td class="t1c">T1</td><td>40%</td><td class="t1c" id="tr-t1">0</td>
+              <td><input type="number" id="tr-t1p" placeholder="0.00" oninput="calcTranches()"></td>
+              <td id="tr-t1v" style="color:var(--gold);">$0</td></tr>
+            <tr><td class="t2c">T2</td><td>30%</td><td class="t2c" id="tr-t2">0</td>
+              <td><input type="number" id="tr-t2p" placeholder="0.00" oninput="calcTranches()"></td>
+              <td id="tr-t2v" style="color:var(--blue);">$0</td></tr>
+            <tr><td>T3</td><td>30%</td><td id="tr-t3">0</td>
+              <td><input type="number" id="tr-t3p" placeholder="0.00" oninput="calcTranches()"></td>
+              <td id="tr-t3v">$0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 6: ENTRY ══════ -->
+<div class="tab-content" id="tab-6">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">🎯 ENTRY ТӨРӨЛ</div>
+        <div class="rrow"><div class="rlbl">Entry type</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="e_t" value="breakout" id="et1"><label for="et1">Breakout</label></div>
+          <div class="ropt g"><input type="radio" name="e_t" value="pullback" id="et2"><label for="et2">Pullback</label></div>
+          <div class="ropt g"><input type="radio" name="e_t" value="episodic" id="et3"><label for="et3">Episodic</label></div>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">✅ PRE-ENTRY</div>
+        <div class="rrow"><div class="rlbl">S&P Futures</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_s" value="ok" id="pre1"><label for="pre1">Эерэг ✅</label></div>
+          <div class="ropt r"><input type="radio" name="pre_s" value="bad" id="pre2"><label for="pre2">Буурч байна ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Macro News</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_n" value="ok" id="prn1"><label for="prn1">Байхгүй ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pre_n" value="warn" id="prn2"><label for="prn2">Хүлээгдэж байна ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pre_n" value="bad" id="prn3"><label for="prn3">Сөрөг ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Pre-Market</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_p" value="ok" id="prp1"><label for="prp1">Дээш ✅</label></div>
+          <div class="ropt r"><input type="radio" name="pre_p" value="bad" id="prp2"><label for="prp2">Доош ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Volume</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_v" value="ok" id="prv1"><label for="prv1">Дундажаас өндөр ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pre_v" value="warn" id="prv2"><label for="prv2">Хэвийн ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pre_v" value="bad" id="prv3"><label for="prv3">Хэт бага ❌</label></div>
+        </div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">📋 ORDER EXECUTION</div>
+        <table class="ttbl">
+          <thead><tr><th>Tranche</th><th>Shares</th><th>Entry $</th><th>Type</th><th>Filled</th></tr></thead>
+          <tbody>
+            <tr><td class="t1c">T1</td><td class="t1c" id="et1s">0</td>
+              <td><input type="number" id="et1p" placeholder="0.00"></td>
+              <td><select class="inp" style="width:80px;padding:2px 6px;"><option>Market</option><option>Limit</option><option>Stop</option></select></td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td class="t2c">T2</td><td class="t2c" id="et2s">0</td>
+              <td><input type="number" id="et2p" placeholder="0.00"></td>
+              <td><select class="inp" style="width:80px;padding:2px 6px;"><option>Limit</option><option>Market</option></select></td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td>T3</td><td id="et3s">0</td>
+              <td><input type="number" id="et3p" placeholder="0.00"></td>
+              <td><select class="inp" style="width:80px;padding:2px 6px;"><option>Limit</option><option>Market</option></select></td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-hd">🛑 STOP LOSS</div>
+        <div class="rrow"><div class="rlbl">SL арга</div><div class="ropts">
+          <div class="ropt"><input type="radio" name="slm" value="fixed" id="slm1"><label for="slm1">Тогтмол %</label></div>
+          <div class="ropt"><input type="radio" name="slm" value="atr" id="slm2"><label for="slm2">ATR x2</label></div>
+          <div class="ropt"><input type="radio" name="slm" value="swing" id="slm3"><label for="slm3">Swing Low</label></div>
+        </div></div>
+        <div class="irow">
+          <div class="ilbl">SL Price</div>
+          <input class="inp" type="number" id="sl-p" placeholder="0.00" oninput="calcSLDist()" style="width:120px;">
+          <div class="ival" id="sl-dist">0.00%</div>
+        </div>
+        <div class="rrow"><div class="rlbl">SL дүрэм</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="slr" value="strict" id="slr1"><label for="slr1">Хатуу — Тэр даруй гар</label></div>
+          <div class="ropt y"><input type="radio" name="slr" value="eod" id="slr2"><label for="slr2">EOD хаалтад шалга</label></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 7: EXIT ══════ -->
+<div class="tab-content" id="tab-7">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">💹 EXIT PLAN</div>
+        <div id="tp1-remind" class="banner b-y">💡 TP1 хийсний дараа SL → Breakeven!</div>
+        <table class="ttbl">
+          <thead><tr><th>Target</th><th>%</th><th>Price</th><th>R:R</th><th>Filled</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--yellow)">TP1</td><td>30%</td>
+              <td><input type="number" id="tp1p" placeholder="0.00" oninput="calcTP()"></td>
+              <td id="tp1rr" style="color:var(--yellow);">—</td>
+              <td><input type="checkbox" id="tp1fill" onchange="showTP1Remind()" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td style="color:var(--green)">TP2</td><td>30%</td>
+              <td><input type="number" id="tp2p" placeholder="0.00" oninput="calcTP()"></td>
+              <td id="tp2rr" style="color:var(--green);">—</td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td style="color:var(--gold)">TP3</td><td>40%</td>
+              <td><input type="number" id="tp3p" placeholder="Trailing" oninput="calcTP()"></td>
+              <td id="tp3rr" style="color:var(--gold);">—</td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+          </tbody>
+        </table>
+        <div class="div"></div>
+        <div class="mlbl">TRAILING STOP</div>
+        <div class="rrow"><div class="rlbl">Trailing арга</div><div class="ropts">
+          <div class="ropt"><input type="radio" name="trm" value="ema21" id="tr1"><label for="tr1">EMA 21</label></div>
+          <div class="ropt"><input type="radio" name="trm" value="atr2" id="tr2"><label for="tr2">ATR x2</label></div>
+          <div class="ropt"><input type="radio" name="trm" value="swing" id="tr3"><label for="tr3">Swing Low</label></div>
+        </div></div>
+        <div class="irow"><div class="ilbl">Trailing SL</div><input class="inp" type="number" id="trail-sl" placeholder="0.00" style="width:120px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">💰 P&L</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">Realized P&L</div><div class="cval" id="ex-pnl">$0</div></div>
+          <div class="citem"><div class="clbl">Return %</div><div class="cval" id="ex-ret">0%</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">🌪 PARABOLIC SIGNALS</div>
+        <div class="mlbl" style="margin-bottom:8px;">7 ХОНОГ ТУТАМ ШАЛГА</div>
+        <div class="rrow"><div class="rlbl">Speed Signal</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="par_s" value="1" id="ps1" onchange="calcPara()"><label for="ps1">7 хоногт 10%+ ⚠️</label></div>
+          <div class="ropt g"><input type="radio" name="par_s" value="0" id="ps2" onchange="calcPara()"><label for="ps2">Хэвийн ✅</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Volume Signal</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="par_v" value="1" id="pv1" onchange="calcPara()"><label for="pv1">Туйлын өндөр ⚠️</label></div>
+          <div class="ropt g"><input type="radio" name="par_v" value="0" id="pv2" onchange="calcPara()"><label for="pv2">Хэвийн ✅</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Position Signal</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="par_p" value="1" id="pp_1" onchange="calcPara()"><label for="pp_1">100%+ дээш ⚠️</label></div>
+          <div class="ropt g"><input type="radio" name="par_p" value="0" id="pp_2" onchange="calcPara()"><label for="pp_2">Хэвийн ✅</label></div>
+        </div></div>
+        <div id="para-res" class="parascore">Дохио байхгүй</div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🆘 DEFENSIVE EXIT</div>
+        <div class="crow"><input type="checkbox" id="def1" onchange="checkDef()"><label for="def1" style="color:var(--red);">⛔ Stop Loss эвдэгдсэн</label></div>
+        <div class="crow"><input type="checkbox" id="def2" onchange="checkDef()"><label for="def2" style="color:var(--red);">⛔ Earnings Miss</label></div>
+        <div class="crow"><input type="checkbox" id="def3" onchange="checkDef()"><label for="def3" style="color:var(--red);">⛔ CEO огцорсон</label></div>
+        <div class="crow"><input type="checkbox" id="def4" onchange="checkDef()"><label for="def4" style="color:var(--red);">⛔ Fraud</label></div>
+        <div class="crow"><input type="checkbox" id="def5" onchange="checkDef()"><label for="def5" style="color:var(--red);">⛔ Sector асуудал</label></div>
+        <div id="def-warn" class="banner b-r" style="margin-top:8px;">🚨 ЯАРАЛТАЙ ГАР!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 8: JOURNAL ══════ -->
+<div class="tab-content" id="tab-8">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">📝 TRADE SUMMARY</div>
+        <div class="irow"><div class="ilbl">Entry avg price</div><input class="inp" type="number" id="j-en" placeholder="0.00" oninput="calcJ()" style="width:120px;"></div>
+        <div class="irow"><div class="ilbl">Exit avg price</div><input class="inp" type="number" id="j-ex" placeholder="0.00" oninput="calcJ()" style="width:120px;"></div>
+        <div class="irow"><div class="ilbl">Total Shares</div><input class="inp" type="number" id="j-sh" placeholder="0" oninput="calcJ()" style="width:120px;"></div>
+        <div class="irow"><div class="ilbl">Days Held</div><input class="inp" type="number" id="j-dy" placeholder="0" style="width:100px;"></div>
+        <div class="irow"><div class="ilbl">Max Drawdown %</div><input class="inp" type="number" id="j-dd" placeholder="0.00" style="width:100px;"></div>
+        <div class="cgrid" style="margin-top:10px;">
+          <div class="citem"><div class="clbl">Realized P&L</div><div class="cval" id="j-pnl">$0</div></div>
+          <div class="citem"><div class="clbl">Return %</div><div class="cval" id="j-ret">0%</div></div>
+        </div>
+        <div class="div"></div>
+        <div class="mlbl">СЭТГЭЛИЙН БАЙДАЛ</div>
+        <div class="emotrow" style="margin-top:6px;">
+          <button class="ebtn" onclick="setEmo('calm',this,'ac')">😌 Calm</button>
+          <button class="ebtn" onclick="setEmo('confident',this,'af')">💪 Confident</button>
+          <button class="ebtn" onclick="setEmo('fomo',this,'fo')">😰 FOMO</button>
+          <button class="ebtn" onclick="setEmo('fearful',this,'fe')">😨 Fearful</button>
+          <button class="ebtn" onclick="setEmo('excited',this,'ex')">🚀 Excited</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">💭 ТЭМДЭГЛЭЛ</div>
+        <div class="mlbl">Trade Thesis</div>
+        <textarea class="inp" id="j-th" placeholder="Энэ trade хийх үндэслэл..." style="margin-bottom:10px;"></textarea>
+        <div class="mlbl">Invalidation</div>
+        <textarea class="inp" id="j-in" placeholder="Trade алдах нөхцөл..." style="margin-bottom:10px;"></textarea>
+        <div class="mlbl">Сургамж</div>
+        <textarea class="inp" id="j-le" placeholder="Энэ trade-аас юу сурав..." style="margin-bottom:10px;"></textarea>
+        <div class="mlbl">Дараагийн trade-д өөрчлөх</div>
+        <textarea class="inp" id="j-nx" placeholder="Сайжруулах зүйл..."></textarea>
+      </div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn btn-gold" onclick="saveJournal()">💾 ЖУРНАЛ ХАДГАЛАХ</button>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">📊 СТАТИСТИК</div>
+        <div class="sgrid">
+          <div class="sbox2"><div class="sval" id="st-t">0</div><div class="slbl2">Нийт Trade</div></div>
+          <div class="sbox2"><div class="sval" id="st-w">0%</div><div class="slbl2">Win Rate</div></div>
+          <div class="sbox2"><div class="sval" id="st-r">0</div><div class="slbl2">Avg R:R</div></div>
+          <div class="sbox2"><div class="sval" id="st-p">$0</div><div class="slbl2">Total P&L</div></div>
+          <div class="sbox2"><div class="sval" id="st-b" style="color:var(--green);">$0</div><div class="slbl2">Best</div></div>
+          <div class="sbox2"><div class="sval" id="st-wo" style="color:var(--red);">$0</div><div class="slbl2">Worst</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">📜 HISTORY</div>
+        <div id="j-hist"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIONS -->
+<div class="actbar">
+  <button class="btn btn-gold btn-sm" onclick="fetchAllData()">⚡ ШИНЭЧЛЭХ</button>
+  <button class="btn btn-gold btn-sm" onclick="window.print()">🖨 PRINT</button>
+  <button class="btn btn-green btn-sm" onclick="save()">💾 ХАДГАЛАХ</button>
+  <button class="btn btn-red btn-sm" onclick="newTrade()">🔄 ШИНЭ TRADE</button>
+</div>
+
+<script>
+// ════════════════════════════════════
+// STATE
+// ════════════════════════════════════
+let watchlist = [];
+let journalEntries = [];
+let selectedEmo = '';
+let totalShares = 0;
+let entryPrice = 0;
+let riskDollar = 0;
+let liveData = {};
+
+// ════════════════════════════════════
+// TABS
+// ════════════════════════════════════
+function switchTab(n, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + n).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('h-step').textContent = n;
+}
+
+// ════════════════════════════════════
+// YAHOO FINANCE FETCH — multi-proxy fallback
+// ════════════════════════════════════
+const API_BASE = 'https://its-pro-api.onrender.com';
+
+async function checkServer() {
+  try {
+    const res = await fetch(API_BASE + '/health', { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch { return false; }
+}
+
+async function yahooFetch(ticker) {
+  // This is kept for compatibility but not used directly
+  throw new Error('Use fetchQuote() instead');
+}
+
+async function fetchQuote(ticker) {
+  const res = await fetch(`${API_BASE}/quote/${ticker}`, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`${ticker} олдсонгүй`);
+  return await res.json();
+}
+
+// RSI calculation
+function calcRSI(closes, period = 14) {
+  if (closes.length < period + 1) return 50;
+  let gains = 0, losses = 0;
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1];
+    if (diff > 0) gains += diff; else losses -= diff;
+  }
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return Math.round(100 - (100 / (1 + rs)));
+}
+
+// EMA calculation
+function calcEMA(data, period) {
+  const k = 2 / (period + 1);
+  let ema = data[0];
+  for (let i = 1; i < data.length; i++) ema = data[i] * k + ema * (1 - k);
+  return ema;
+}
+
+// ATR calculation
+function calcATR(highs, lows, closes, period = 14) {
+  let trs = [];
+  for (let i = 1; i < closes.length; i++) {
+    const tr = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i-1]), Math.abs(lows[i] - closes[i-1]));
+    trs.push(tr);
+  }
+  const recent = trs.slice(-period);
+  return recent.reduce((a,b) => a+b, 0) / recent.length;
+}
+
+function showErr(msg) {
+  const t = document.getElementById('err-toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 6000);
+  // Show download guidance if proxy fails
+  if (msg.includes('proxy') || msg.includes('fetch') || msg.includes('Алдаа')) {
+    document.getElementById('dl-banner').style.display = 'block';
+  }
+}
+
+function setFetchMsg(msg) {
+  document.getElementById('fetch-msg').textContent = msg;
+}
+
+async function fetchAllData() {
+  const ticker = document.getElementById('h-ticker').value.trim().toUpperCase();
+  if (!ticker) { showErr('Ticker оруулна уу'); return; }
+
+  const overlay = document.getElementById('fetch-overlay');
+  const btn = document.getElementById('fetch-btn');
+  overlay.classList.add('vis');
+  btn.classList.add('loading');
+  btn.textContent = '⏳ ТАТАЖ БАЙНА...';
+
+  try {
+    // Check server
+    setFetchMsg('Серверт холбогдож байна...');
+    const serverOk = await checkServer();
+    if (!serverOk) {
+      overlay.classList.remove('vis');
+      btn.classList.remove('loading');
+      btn.textContent = '⚡ AUTO FETCH';
+      document.getElementById('dl-banner').style.display = 'none';
+      document.getElementById('server-banner').style.display = 'block';
+      return;
+    }
+
+    // Fetch ticker
+    setFetchMsg(`${ticker} татаж байна...`);
+    const d = await fetchQuote(ticker);
+    if (d.error) throw new Error(d.error);
+
+    // Fetch VIX & SPY in parallel
+    setFetchMsg('VIX + SPY татаж байна...');
+    const [vixData, spyData] = await Promise.allSettled([
+      fetchQuote('%5EVIX'),
+      fetchQuote('SPY')
+    ]);
+
+    const vixPrice = vixData.status === 'fulfilled' && !vixData.value.error ? vixData.value.price : 20;
+    const spyPrice = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.price : 0;
+    const spyEMA200 = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.ema200 : 0;
+    const spyAbove200 = spyPrice > spyEMA200;
+
+    liveData = {
+      ticker,
+      currentPrice: d.price,
+      prevClose: d.prev_close,
+      change: d.change_pct,
+      weekHigh52: d.high_52w,
+      weekLow52: d.low_52w,
+      distFrom52High: d.dist_from_52h,
+      ema21: d.ema21,
+      ema50: d.ema50,
+      ema200: d.ema200,
+      rsi14: d.rsi14,
+      atr14: d.atr14,
+      avgVol: d.avg_vol,
+      curVol: d.cur_vol,
+      volRatio: d.vol_ratio,
+      baseDepth: d.dist_from_52h,
+      sector: d.sector,
+      industry: d.industry,
+      epsGrowth: d.eps_growth,
+      revGrowth: d.rev_growth,
+      nextEarnings: d.next_earnings,
+      vixPrice, spyPrice, spyEMA200, spyAbove200,
+      fetchTime: new Date().toLocaleTimeString()
+    };
+
+    setFetchMsg('Мэдээллийг боловсруулж байна...');
+    updateDataPanel();
+    autoFillRegime();
+    autoFillSetup();
+    autoFillTimeframe();
+    autoFillPosition();
+    autoFillFundamentals();
+
+    document.getElementById('h-last-fetch').textContent = `🟢 ${liveData.fetchTime}`;
+    document.getElementById('data-live-badge').style.display = 'inline';
+    document.getElementById('dl-banner').style.display = 'none';
+
+    calcAll();
+    save();
+
+  } catch (err) {
+    console.error(err);
+    showErr(`Алдаа: ${err.message}`);
+  } finally {
+    overlay.classList.remove('vis');
+    btn.classList.remove('loading');
+    btn.textContent = '⚡ AUTO FETCH';
+  }
+}
+
+// ════════════════════════════════════
+// DATA PANEL
+// ════════════════════════════════════
+function updateDataPanel() {
+  const d = liveData;
+  const panel = document.getElementById('data-panel');
+  panel.classList.add('visible');
+
+  const chgColor = d.change >= 0 ? 'var(--green)' : 'var(--red)';
+  const chgSign = d.change >= 0 ? '+' : '';
+
+  document.getElementById('data-grid').innerHTML = `
+    <div class="data-cell">
+      <div class="data-cell-lbl">${d.ticker} Үнэ</div>
+      <div class="data-cell-val">$${d.currentPrice?.toFixed(2)}</div>
+      <div class="data-cell-sub" style="color:${chgColor}">${chgSign}${d.change?.toFixed(2)}%</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">VIX</div>
+      <div class="data-cell-val ${d.vixPrice < 15 ? '' : d.vixPrice < 25 ? 'warn' : 'danger'}">${d.vixPrice?.toFixed(2)}</div>
+      <div class="data-cell-sub">${d.vixPrice < 15 ? 'Тайван' : d.vixPrice < 25 ? 'Хэвийн' : 'Аюул'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">RSI (14)</div>
+      <div class="data-cell-val ${d.rsi14 > 70 ? 'danger' : d.rsi14 > 50 ? '' : 'warn'}">${d.rsi14}</div>
+      <div class="data-cell-sub">${d.rsi14 > 70 ? 'Хэт өндөр' : d.rsi14 > 50 ? 'Бычийн' : 'Ведмеж'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">ATR (14)</div>
+      <div class="data-cell-val">$${d.atr14?.toFixed(2)}</div>
+      <div class="data-cell-sub">${(d.atr14/d.currentPrice*100).toFixed(1)}% of price</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">EMA 21</div>
+      <div class="data-cell-val ${d.currentPrice > d.ema21 ? '' : 'danger'}">$${d.ema21?.toFixed(2)}</div>
+      <div class="data-cell-sub">${d.currentPrice > d.ema21 ? '▲ Дээр' : '▼ Доор'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">EMA 50</div>
+      <div class="data-cell-val ${d.currentPrice > d.ema50 ? '' : 'danger'}">$${d.ema50?.toFixed(2)}</div>
+      <div class="data-cell-sub">${d.currentPrice > d.ema50 ? '▲ Дээр' : '▼ Доор'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">EMA 200</div>
+      <div class="data-cell-val ${d.currentPrice > d.ema200 ? '' : 'danger'}">$${d.ema200?.toFixed(2)}</div>
+      <div class="data-cell-sub">${d.currentPrice > d.ema200 ? '▲ Дээр' : '▼ Доор'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">52W High зай</div>
+      <div class="data-cell-val ${d.distFrom52High < 15 ? '' : d.distFrom52High < 30 ? 'warn' : 'danger'}">${d.distFrom52High?.toFixed(1)}%</div>
+      <div class="data-cell-sub">High: $${d.weekHigh52?.toFixed(2)}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">Volume Ratio</div>
+      <div class="data-cell-val ${d.volRatio > 1.5 ? '' : d.volRatio > 0.7 ? 'warn' : 'danger'}">${d.volRatio?.toFixed(2)}x</div>
+      <div class="data-cell-sub">${(d.curVol/1e6).toFixed(1)}M / ${(d.avgVol/1e6).toFixed(1)}M avg</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">SPY</div>
+      <div class="data-cell-val ${d.spyAbove200 ? '' : 'danger'}">$${d.spyPrice?.toFixed(2)}</div>
+      <div class="data-cell-sub">${d.spyAbove200 ? '▲ 200MA дээр' : '▼ 200MA доор'}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">SL (ATR x2)</div>
+      <div class="data-cell-val warn">$${(d.currentPrice - d.atr14 * 2)?.toFixed(2)}</div>
+      <div class="data-cell-sub">-${(d.atr14*2/d.currentPrice*100).toFixed(1)}%</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">Татсан цаг</div>
+      <div class="data-cell-val" style="font-size:13px;color:var(--gold);">${d.fetchTime}</div>
+      <div class="data-cell-sub">Yahoo Finance</div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════
+// AUTO-FILL FUNCTIONS
+// ════════════════════════════════════
+function autoSelect(name, value) {
+  const el = document.querySelector(`input[name="${name}"][value="${value}"]`);
+  if (el) { el.checked = true; el.classList.add('auto-selected'); }
+}
+
+function autoFillRegime() {
+  const d = liveData;
+  document.getElementById('r-auto-tag').innerHTML = '<span class="auto-tag">AUTO</span>';
+
+  // S&P500 position
+  if (d.spyAbove200) autoSelect('r_idx', '2');
+  else autoSelect('r_idx', '0');
+
+  // VIX
+  if (d.vixPrice < 15) autoSelect('r_vix', '2');
+  else if (d.vixPrice < 25) autoSelect('r_vix', '1');
+  else if (d.vixPrice < 35) autoSelect('r_vix', '0.5');
+  else autoSelect('r_vix', '0');
+
+  // Show VIX live value
+  document.getElementById('vix-live').textContent = `[${d.vixPrice?.toFixed(1)}]`;
+
+  // SPY above 200 → percent above 200 estimate (rough: if spy>200ema, likely >50% stocks above)
+  if (d.spyAbove200) {
+    const pctAbove = ((d.spyPrice - d.spyEMA200) / d.spyEMA200 * 100);
+    if (pctAbove > 5) autoSelect('r_pct', '2');
+    else autoSelect('r_pct', '1');
+  } else {
+    autoSelect('r_pct', '0');
+  }
+}
+
+function autoFillSetup() {
+  const d = liveData;
+  document.getElementById('setup-auto-tag').innerHTML = '<span class="auto-tag">AUTO</span>';
+
+  // 52W depth from high
+  if (d.distFrom52High < 15) autoSelect('s_dep', '2');
+  else if (d.distFrom52High < 30) autoSelect('s_dep', '1');
+  else if (d.distFrom52High < 50) autoSelect('s_dep', '0.5');
+  else autoSelect('s_dep', '0');
+  document.getElementById('depth-live').textContent = `[${d.distFrom52High?.toFixed(1)}%]`;
+
+  // Volume pattern
+  if (d.volRatio < 0.8) autoSelect('s_vol', '2');
+  else if (d.volRatio < 1.3) autoSelect('s_vol', '1');
+  else autoSelect('s_vol', '0');
+
+  // Auto-fill entry price & ATR
+  document.getElementById('ps-entry').value = d.currentPrice?.toFixed(2);
+  document.getElementById('ps-entry').classList.add('auto-filled');
+  document.getElementById('ep-auto').style.display = 'inline';
+
+  document.getElementById('ps-atr').value = d.atr14?.toFixed(2);
+  document.getElementById('ps-atr').classList.add('auto-filled');
+  document.getElementById('atr-auto').style.display = 'inline';
+
+  // Auto SL = ATR x2
+  const sl = (d.currentPrice - d.atr14 * 2).toFixed(2);
+  document.getElementById('ps-sl').value = sl;
+  document.getElementById('ps-sl').classList.add('auto-filled');
+
+  // Setup tab: pivot dist auto-calc
+  const pivot = parseFloat(document.getElementById('pivot-price').value);
+  if (pivot > 0) {
+    const dist = ((d.currentPrice - pivot) / pivot * 100);
+    document.getElementById('pivot-dist-val').textContent = `${dist.toFixed(2)}%`;
+    document.getElementById('cur-price-setup').textContent = `$${d.currentPrice?.toFixed(2)}`;
+    if (dist >= 0 && dist < 3) autoSelect('s_dist', '2');
+    else if (dist >= 0 && dist < 5) autoSelect('s_dist', '1');
+    else if (dist >= 0 && dist < 8) autoSelect('s_dist', '0.5');
+    else if (dist < 0) { document.getElementById('pivot-dist-val').textContent = `Pivot дутсан ${Math.abs(dist).toFixed(1)}%`; }
+    else autoSelect('s_dist', '0');
+    document.getElementById('pivot-auto-tag').innerHTML = '<span class="auto-tag">AUTO</span>';
+  } else {
+    document.getElementById('cur-price-setup').textContent = `$${d.currentPrice?.toFixed(2)}`;
+  }
+}
+
+function autoFillTimeframe() {
+  const d = liveData;
+  document.getElementById('tf-auto-tag').innerHTML = '<span class="auto-tag">AUTO</span>';
+
+  // EMA 21 relationship
+  if (d.currentPrice > d.ema21) {
+    // Check if rising: price > ema21 and ema21 > ema50 → strongly bullish
+    if (d.ema21 > d.ema50) autoSelect('tf_d2', '2');
+    else autoSelect('tf_d2', '1');
+  } else {
+    autoSelect('tf_d2', '0');
+  }
+
+  // EMA alignment
+  if (d.ema21 > d.ema50) autoSelect('tf_de', '2');
+  else if (Math.abs(d.ema21 - d.ema50) / d.ema50 < 0.005) autoSelect('tf_de', '1');
+  else autoSelect('tf_de', '0');
+
+  // Volume dry-up (daily)
+  if (d.volRatio < 0.7) autoSelect('tf_dv', '2');
+  else if (d.volRatio < 1.2) autoSelect('tf_dv', '1');
+  else autoSelect('tf_dv', '0');
+
+  // Monthly 200MA
+  if (d.currentPrice > d.ema200) autoSelect('tf_m2', '1');
+  else autoSelect('tf_m2', '0');
+
+  // Monthly trend (price vs 200 EMA → rough)
+  if (d.currentPrice > d.ema200 * 1.05) autoSelect('tf_mt', '2');
+  else if (d.currentPrice > d.ema200) autoSelect('tf_mt', '1');
+  else autoSelect('tf_mt', '0');
+
+  // RSI auto
+  const rsi = d.rsi14;
+  document.getElementById('rsi-live').textContent = `[RSI:${rsi}]`;
+  if (rsi > 50 && rsi < 70) autoSelect('tf_4r', '2');
+  else if (rsi >= 70) autoSelect('tf_4r', '0.5');
+  else autoSelect('tf_4r', '0');
+}
+
+function autoFillPosition() {
+  const d = liveData;
+  document.getElementById('pos-auto-tag').innerHTML = '<span class="auto-tag">AUTO</span>';
+  entryPrice = d.currentPrice;
+  calcPos();
+}
+
+// ════════════════════════════════════
+// WATCHLIST FETCH
+// ════════════════════════════════════
+async function fetchWatchStock(ticker) {
+  try {
+    const data = await yahooFetch(ticker);
+    const result = data.chart.result[0];
+    const closes = result.indicators.quote[0].close.filter(Boolean);
+    const price = result.meta.regularMarketPrice;
+    const high52 = result.meta.fiftyTwoWeekHigh || Math.max(...closes);
+    const dist = ((high52 - price) / high52 * 100);
+    const rsi = calcRSI(closes);
+    const vols = result.indicators.quote[0].volume.filter(Boolean);
+    const avgVol = vols.slice(-20).reduce((a,b)=>a+b,0)/20;
+    const curVol = vols[vols.length-1];
+    const volRatio = curVol/avgVol;
+
+    return { price, dist, rsi, volRatio };
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fetchAllWatchlist() {
+  for (const w of watchlist) {
+    const wdata = await fetchWatchStock(w.ticker);
+    if (wdata) {
+      w.liveData = wdata;
+      // Auto-select some radio
+      autoSelectWatch(w.ticker, wdata);
+    }
+  }
+  renderWatchlist();
+}
+
+function autoSelectWatch(ticker, d) {
+  // 52W high dist
+  if (d.dist < 15) setWatchRadio(ticker, 'high52', '2');
+  else if (d.dist < 30) setWatchRadio(ticker, 'high52', '1');
+  else setWatchRadio(ticker, 'high52', '0');
+}
+
+function setWatchRadio(ticker, key, val) {
+  const el = document.querySelector(`input[name="w_${key}_w_${ticker}"][value="${val}"]`);
+  if (el) { el.checked = true; el.classList.add('auto-selected'); }
+}
+
+// ════════════════════════════════════
+// WATCHLIST UI
+// ════════════════════════════════════
+function addWatch() {
+  const inp = document.getElementById('new-ticker');
+  const t = inp.value.trim().toUpperCase();
+  if (!t) return;
+  if (watchlist.length >= 10) { alert('Дээд тал нь 10!'); return; }
+  if (watchlist.find(w => w.ticker === t)) { alert('Аль хэдийн байна!'); return; }
+  watchlist.push({ ticker: t, liveData: null });
+  inp.value = '';
+  renderWatchlist();
+  save();
+}
+
+function removeWatch(ticker) {
+  watchlist = watchlist.filter(w => w.ticker !== ticker);
+  renderWatchlist(); save();
+}
+
+function renderWatchlist() {
+  const c = document.getElementById('wlist');
+  document.getElementById('wcount').textContent = watchlist.length;
+  if (!watchlist.length) { c.innerHTML = '<div style="color:var(--txt3);text-align:center;padding:30px;font-size:12px;">Watchlist хоосон</div>'; return; }
+  c.innerHTML = watchlist.map(w => `
+    <div class="witem" id="wi-${w.ticker}">
+      <div class="wticker">⬡ ${w.ticker}
+        ${w.liveData ? `<span style="font-family:var(--mono);font-size:12px;color:var(--green);margin-left:10px;">$${w.liveData.price?.toFixed(2)}</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--txt2);">RSI:${w.liveData.rsi} | ${w.liveData.dist?.toFixed(1)}% from 52H</span>` : ''}
+      </div>
+      <button class="btn btn-red btn-sm" style="position:absolute;top:10px;right:10px;" onclick="removeWatch('${w.ticker}')">✕</button>
+      <div class="wscore" id="wscore-${w.ticker}">0/7</div>
+      ${watchRadioRows(w.ticker)}
+    </div>
+  `).join('');
+  c.querySelectorAll('input[type=radio]').forEach(r => {
+    r.addEventListener('change', () => { calcWatchScore(r.name.split('_w_')[1]); save(); });
+  });
+  watchlist.forEach(w => calcWatchScore(w.ticker));
+}
+
+function watchRadioRows(t) {
+  const rows = [
+    ['EPS өсөлт','eps',['25%+ ✅✅|2','15-25% ✅|1','<15% ❌|0']],
+    ['Revenue өсөлт','rev',['15%+ ✅✅|2','10-15% ✅|1','<10% ❌|0']],
+    ['RS Rating','rs',['90+ ✅✅|2','80-90 ✅|1','<80 ❌|0']],
+    ['52W high зай','high52',['0-15% ✅✅|2','15-30% ✅|1','30%+ ❌|0']],
+    ['Sector байдал','sect',['Тэргүүлэгч ✅✅|2','Дунд ⚠️|1','Сул ❌|0']],
+    ['Институц','inst',['Нэмэгдэж байна ✅|1','Хэвээр ⚠️|0.5','Буурч байна ❌|0']],
+    ['Earnings date','earn',['3+ долоо хоног ✅|2','1-3 долоо хоног ⚠️|1','7 хоногт ойр ❌|0']],
+  ];
+  return rows.map(([lbl, key, opts]) => `
+    <div class="rrow">
+      <div class="rlbl">${lbl}</div>
+      <div class="ropts">
+        ${opts.map((o,i) => {
+          const [txt,val] = o.split('|');
+          const cls = txt.includes('✅')?'g':txt.includes('❌')?'r':txt.includes('⚠️')?'y':'';
+          return `<div class="ropt ${cls}"><input type="radio" name="w_${key}_w_${t}" value="${val}" id="w${key}${i}${t}"><label for="w${key}${i}${t}">${txt}</label></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function calcWatchScore(ticker) {
+  let s = 0;
+  ['eps','rev','rs','high52','sect','inst','earn'].forEach(k => {
+    const el = document.querySelector(`input[name="w_${k}_w_${ticker}"]:checked`);
+    if (el) s += parseFloat(el.value);
+  });
+  const norm = Math.round((s/13)*7*10)/10;
+  const el = document.getElementById(`wscore-${ticker}`);
+  if (el) {
+    el.textContent = norm.toFixed(1)+'/7';
+    el.style.color = norm>=5?'var(--green)':norm>=3.5?'var(--yellow)':'var(--red)';
+  }
+}
+
+// ════════════════════════════════════
+// CALCS
+// ════════════════════════════════════
+function getVal(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  return el ? parseFloat(el.value) : 0;
+}
+
+function calcRegime() {
+  const vals = ['r_idx','r_vix','r_ad','r_pct','r_fed','r_yc','r_cyc','r_sec','r_ms'].map(n=>getVal(n));
+  const raw = vals.reduce((a,b)=>a+b,0);
+  const score = Math.min(10, Math.round((raw/14)*100)/10);
+  document.getElementById('rscore').textContent = score.toFixed(1);
+
+  const bear = document.getElementById('rc4');
+  document.getElementById('bear-banner').classList.toggle('vis', bear?.checked);
+
+  const v = document.getElementById('rverdict');
+  if (score >= 7) { v.className='banner b-g vis'; v.textContent='✅ Зах зээл хүчтэй — Position хийнэ'; }
+  else if (score >= 4) { v.className='banner b-y vis'; v.textContent='⚠️ Нейтрал — Болгоомжтой'; }
+  else { v.className='banner b-r vis'; v.textContent='❌ Сул — Cash-д байна'; }
+
+  const badge = document.getElementById('h-regime');
+  if (score>=7){badge.className='badge b-bull';badge.textContent='BULL';}
+  else if(score>=4){badge.className='badge b-neutral';badge.textContent='NEUTRAL';}
+  else{badge.className='badge b-bear';badge.textContent='BEAR';}
+  return score;
+}
+
+function calcSetup() {
+  let cf=0;
+  for(let i=1;i<=5;i++) if(document.getElementById('cf'+i)?.checked) cf++;
+  document.getElementById('setup-snum').textContent=cf;
+  const r=document.getElementById('setup-result');
+  if(cf>=5){r.style.cssText='border-color:var(--green);color:var(--green);background:rgba(0,214,143,.08)';r.textContent='✅ 5/5 — TRADE БЭЛЭН';}
+  else if(cf>=4){r.style.cssText='border-color:var(--yellow);color:var(--yellow);background:rgba(255,209,102,.08)';r.textContent='⚠️ 4/5 — ХҮЛЭЭ';}
+  else{r.style.cssText='border-color:var(--red);color:var(--red);background:rgba(255,64,96,.08)';r.textContent=`❌ ${cf}/5 — ОРОХГҮЙ`;}
+  return cf;
+}
+
+function calcTF() {
+  const names=['tf_mt','tf_m2','tf_ms','tf_w1','tf_wv','tf_wr','tf_d2','tf_de','tf_dv','tf_4t','tf_4r','tf_4tr'];
+  let s=0; names.forEach(n=>s+=getVal(n));
+  const sc=Math.min(20,Math.round(s));
+  document.getElementById('tf-snum').textContent=sc;
+  const tt=document.getElementById('tf-type'), al=document.getElementById('tf-align');
+  if(sc>=16){tt.textContent='POSITION';tt.style.color='var(--green)';al.textContent='НИЙЦСЭН';al.style.color='var(--green)';}
+  else if(sc>=10){tt.textContent='SWING';tt.style.color='var(--yellow)';al.textContent='ХЭСЭГЧЛЭН';al.style.color='var(--yellow)';}
+  else{tt.textContent='ХҮЛЭЭ';tt.style.color='var(--red)';al.textContent='ЗӨРЧИЛДСӨН';al.style.color='var(--red)';}
+  return sc;
+}
+
+function calcPos() {
+  const nav=parseFloat(document.getElementById('ps-nav').value)||0;
+  const rPct=parseFloat(document.getElementById('ps-risk').value)||1.5;
+  entryPrice=parseFloat(document.getElementById('ps-entry').value)||0;
+  const sl=parseFloat(document.getElementById('ps-sl').value)||0;
+  const atr=parseFloat(document.getElementById('ps-atr').value)||0;
+  riskDollar=nav*(rPct/100);
+  const slDist=entryPrice>0&&sl>0?entryPrice-sl:0;
+  const slPct=entryPrice>0?slDist/entryPrice*100:0;
+  totalShares=slDist>0?Math.floor(riskDollar/slDist):0;
+  const posVal=totalShares*entryPrice;
+  const navPct=nav>0?posVal/nav*100:0;
+  const atrSL=entryPrice-atr*2;
+
+  document.getElementById('r-mr').textContent='$'+riskDollar.toFixed(0);
+  document.getElementById('r-sl').textContent=slPct.toFixed(2)+'%';
+  document.getElementById('r-sh').textContent=totalShares.toLocaleString();
+  document.getElementById('r-pv').textContent='$'+posVal.toLocaleString(undefined,{maximumFractionDigits:0});
+  const npEl=document.getElementById('r-np');
+  npEl.textContent=navPct.toFixed(1)+'%';
+  npEl.className='cval'+(navPct>10?' danger':navPct>7?' warn':'');
+  document.getElementById('r-at').textContent='$'+atrSL.toFixed(2);
+
+  document.getElementById('pw-nav').classList.toggle('vis',navPct>10);
+  document.getElementById('pw-risk').classList.toggle('vis',rPct>2);
+
+  const s1=Math.floor(totalShares*.4),s2=Math.floor(totalShares*.3),s3=Math.floor(totalShares*.3);
+  document.getElementById('tr-t1').textContent=s1;
+  document.getElementById('tr-t2').textContent=s2;
+  document.getElementById('tr-t3').textContent=s3;
+  document.getElementById('et1s').textContent=s1;
+  document.getElementById('et2s').textContent=s2;
+  document.getElementById('et3s').textContent=s3;
+
+  calcTranches();
+  calcConviction();
+}
+
+function calcTranches() {
+  const t1p=parseFloat(document.getElementById('tr-t1p').value)||entryPrice;
+  const t2p=parseFloat(document.getElementById('tr-t2p').value)||entryPrice;
+  const t3p=parseFloat(document.getElementById('tr-t3p').value)||entryPrice;
+  const s1=Math.floor(totalShares*.4),s2=Math.floor(totalShares*.3),s3=Math.floor(totalShares*.3);
+  document.getElementById('tr-t1v').textContent='$'+(s1*t1p).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('tr-t2v').textContent='$'+(s2*t2p).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('tr-t3v').textContent='$'+(s3*t3p).toLocaleString(undefined,{maximumFractionDigits:0});
+}
+
+function calcConviction() {
+  const ss=parseFloat(document.getElementById('setup-snum').textContent)||0;
+  const ts=parseFloat(document.getElementById('tf-snum').textContent)||0;
+  const rs=parseFloat(document.getElementById('rscore').textContent)||0;
+  document.getElementById('conv-s').textContent=ss+'/5';
+  document.getElementById('conv-tf').textContent=ts+'/20';
+  document.getElementById('conv-r').textContent=rs+'/10';
+  const m=((ss/5*.3)+(ts/20*.4)+(rs/10*.3)+0.5).toFixed(2);
+  document.getElementById('conv-m').textContent=m+'x';
+}
+
+function calcSLDist() {
+  const ep=entryPrice||parseFloat(document.getElementById('ps-entry').value)||0;
+  const slp=parseFloat(document.getElementById('sl-p').value)||0;
+  const d=ep>0&&slp>0?((ep-slp)/ep*100):0;
+  document.getElementById('sl-dist').textContent=d.toFixed(2)+'%';
+}
+
+function calcTP() {
+  const ep=entryPrice||parseFloat(document.getElementById('ps-entry').value)||0;
+  const sl=parseFloat(document.getElementById('ps-sl').value)||0;
+  const risk=ep-sl;
+  ['tp1','tp2','tp3'].forEach((id,i) => {
+    const tp=parseFloat(document.getElementById(id+'p').value)||0;
+    const rr=risk>0&&tp>0?((tp-ep)/risk).toFixed(2):'—';
+    document.getElementById(id+'rr').textContent=rr!=='—'?rr+'R':'—';
+    const el=document.getElementById('rr'+(i+1));
+    if(el) el.textContent=rr!=='—'?rr+'R':'—';
+  });
+  const t1=parseFloat(document.getElementById('tp1p').value)||0;
+  const t2=parseFloat(document.getElementById('tp2p').value)||0;
+  const t3=parseFloat(document.getElementById('tp3p').value)||0;
+  const s1=Math.floor(totalShares*.3),s2=Math.floor(totalShares*.3),s3=Math.floor(totalShares*.4);
+  const pnl=(t1>0?(t1-ep)*s1:0)+(t2>0?(t2-ep)*s2:0)+(t3>0?(t3-ep)*s3:0);
+  document.getElementById('ex-pnl').textContent='$'+pnl.toFixed(0);
+  const ret=ep>0?pnl/(ep*totalShares)*100:0;
+  document.getElementById('ex-ret').textContent=ret.toFixed(2)+'%';
+}
+
+function showTP1Remind() {
+  document.getElementById('tp1-remind').classList.toggle('vis', document.getElementById('tp1fill').checked);
+}
+
+function calcPara() {
+  const s=['par_s','par_v','par_p'].map(n=>getVal(n)).reduce((a,b)=>a+b,0);
+  const el=document.getElementById('para-res');
+  if(s>=3){el.style.cssText='border-color:var(--red);color:var(--red);background:rgba(255,64,96,.1)';el.textContent='🔴 3/3 — НЭН ДАРУЙ ГАР';}
+  else if(s>=2){el.style.cssText='border-color:var(--yellow);color:var(--yellow);background:rgba(255,209,102,.08)';el.textContent='🟡 2/3 — 50% ЗАРНА';}
+  else if(s>=1){el.style.cssText='border-color:#FF9940;color:#FF9940;background:rgba(255,153,64,.08)';el.textContent='🟠 1/3 — TRAILING ЧАНГАЛНА';}
+  else{el.style.cssText='border-color:var(--green);color:var(--green);background:rgba(0,214,143,.08)';el.textContent='🟢 0/3 — БАРЬЖ БАЙНА';}
+}
+
+function checkDef() {
+  const any=['def1','def2','def3','def4','def5'].some(id=>document.getElementById(id)?.checked);
+  document.getElementById('def-warn').classList.toggle('vis',any);
+}
+
+// ════════════════════════════════════
+// JOURNAL
+// ════════════════════════════════════
+function setEmo(type,btn,cls) {
+  document.querySelectorAll('.ebtn').forEach(b=>b.className='ebtn');
+  btn.classList.add(cls); selectedEmo=type;
+}
+
+function calcJ() {
+  const en=parseFloat(document.getElementById('j-en').value)||0;
+  const ex=parseFloat(document.getElementById('j-ex').value)||0;
+  const sh=parseFloat(document.getElementById('j-sh').value)||0;
+  const pnl=(ex-en)*sh, ret=en>0?(ex-en)/en*100:0;
+  const pe=document.getElementById('j-pnl'), re=document.getElementById('j-ret');
+  pe.textContent='$'+pnl.toFixed(2); pe.style.color=pnl>=0?'var(--green)':'var(--red)';
+  re.textContent=ret.toFixed(2)+'%'; re.style.color=ret>=0?'var(--green)':'var(--red)';
+}
+
+function saveJournal() {
+  const en=parseFloat(document.getElementById('j-en').value)||0;
+  const ex=parseFloat(document.getElementById('j-ex').value)||0;
+  const sh=parseFloat(document.getElementById('j-sh').value)||0;
+  if(!en||!ex||!sh){alert('Entry, Exit, Shares оруулна уу');return;}
+  const pnl=(ex-en)*sh, ret=en>0?(ex-en)/en*100:0;
+  journalEntries.push({
+    id:Date.now(),
+    ticker:document.getElementById('h-ticker').value||'???',
+    date:new Date().toLocaleDateString(),
+    en,ex,sh,
+    pnl:pnl.toFixed(2),ret:ret.toFixed(2),
+    emotion:selectedEmo,
+    thesis:document.getElementById('j-th').value,
+    lesson:document.getElementById('j-le').value
+  });
+  renderJournal(); save();
+  ['j-en','j-ex','j-sh','j-dy','j-dd','j-th','j-in','j-le','j-nx'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.querySelectorAll('.ebtn').forEach(b=>b.className='ebtn');
+  calcJ();
+}
+
+function renderJournal() {
+  const list=document.getElementById('j-hist');
+  if(!journalEntries.length){list.innerHTML='<div style="color:var(--txt3);font-size:12px;text-align:center;padding:20px;">Trade history хоосон</div>';return;}
+  list.innerHTML=journalEntries.slice().reverse().map(e=>`
+    <div class="hitem">
+      <div style="color:var(--gold);font-family:var(--mono);font-size:13px;">${e.ticker}</div>
+      <div style="color:var(--txt2)">${e.date}</div>
+      <div style="color:${parseFloat(e.pnl)>=0?'var(--green)':'var(--red)'}">$${parseFloat(e.pnl).toFixed(0)}</div>
+      <div style="color:${parseFloat(e.ret)>=0?'var(--green)':'var(--red)'}">${e.ret}%</div>
+      <button class="btn btn-red btn-sm" onclick="delJ(${e.id})">✕</button>
+    </div>
+  `).join('');
+  const n=journalEntries.length;
+  document.getElementById('st-t').textContent=n;
+  if(n>0){
+    const wins=journalEntries.filter(e=>parseFloat(e.pnl)>0).length;
+    const tot=journalEntries.reduce((a,e)=>a+parseFloat(e.pnl),0);
+    const best=Math.max(...journalEntries.map(e=>parseFloat(e.pnl)));
+    const worst=Math.min(...journalEntries.map(e=>parseFloat(e.pnl)));
+    document.getElementById('st-w').textContent=Math.round(wins/n*100)+'%';
+    document.getElementById('st-r').textContent=((wins/n)*2.5).toFixed(1)+'R';
+    const tp=document.getElementById('st-p'); tp.textContent='$'+tot.toFixed(0); tp.style.color=tot>=0?'var(--green)':'var(--red)';
+    document.getElementById('st-b').textContent='$'+best.toFixed(0);
+    document.getElementById('st-wo').textContent='$'+worst.toFixed(0);
+  }
+}
+
+function delJ(id){journalEntries=journalEntries.filter(e=>e.id!==id);renderJournal();save();}
+
+function autoFillFundamentals() {
+  const d = liveData;
+  if (!d.epsGrowth && !d.revGrowth) return;
+  // EPS growth auto-select in watchlist if ticker matches
+  const wItem = watchlist.find(w => w.ticker === d.ticker);
+  if (!wItem) return;
+  // EPS
+  if (d.epsGrowth !== null) {
+    if (d.epsGrowth >= 25) setWatchRadio(d.ticker, 'eps', '2');
+    else if (d.epsGrowth >= 15) setWatchRadio(d.ticker, 'eps', '1');
+    else setWatchRadio(d.ticker, 'eps', '0');
+  }
+  // Revenue
+  if (d.revGrowth !== null) {
+    if (d.revGrowth >= 15) setWatchRadio(d.ticker, 'rev', '2');
+    else if (d.revGrowth >= 10) setWatchRadio(d.ticker, 'rev', '1');
+    else setWatchRadio(d.ticker, 'rev', '0');
+  }
+}
+
+// ════════════════════════════════════
+// CALC ALL
+// ════════════════════════════════════
+function calcAll() {
+  calcRegime(); calcSetup(); calcTF(); calcPos(); calcTP();
+  const rs=parseFloat(document.getElementById('rscore').textContent)||0;
+  const ss=parseFloat(document.getElementById('setup-snum').textContent)||0;
+  const ts=parseFloat(document.getElementById('tf-snum').textContent)||0;
+  document.getElementById('h-score').textContent=Math.round(rs*2+ss*2+ts);
+  // Progress
+  const checks=[rs>0,ss>0,ts>0,parseFloat(document.getElementById('ps-nav').value)>0,
+    document.querySelector('input[name="e_t"]:checked'),
+    document.querySelector('input[name="trm"]:checked'),
+    document.getElementById('j-th').value.length>0];
+  const pct=Math.round(checks.filter(Boolean).length/7*100);
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('h-pct').textContent=pct;
+}
+
+// ════════════════════════════════════
+// LOCALSTORAGE
+// ════════════════════════════════════
+function save() {
+  const state={
+    ticker:document.getElementById('h-ticker').value,
+    radios:{},checks:{},inputs:{},
+    watchlist,journalEntries,liveData
+  };
+  document.querySelectorAll('input[type=radio]:checked').forEach(r=>{state.radios[r.name]=r.value;});
+  document.querySelectorAll('input[type=checkbox]').forEach(c=>{if(c.id)state.checks[c.id]=c.checked;});
+  document.querySelectorAll('input[type=number],select,textarea').forEach(i=>{if(i.id)state.inputs[i.id]=i.value;});
+  try{localStorage.setItem('its_pro_v2',JSON.stringify(state));}catch(e){}
+}
+
+function loadState() {
+  try {
+    const raw=localStorage.getItem('its_pro_v2');
+    if(!raw) return;
+    const s=JSON.parse(raw);
+    if(s.ticker) document.getElementById('h-ticker').value=s.ticker;
+    Object.entries(s.radios||{}).forEach(([n,v])=>{const e=document.querySelector(`input[name="${n}"][value="${v}"]`);if(e)e.checked=true;});
+    Object.entries(s.checks||{}).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.checked=v;});
+    Object.entries(s.inputs||{}).forEach(([id,v])=>{const e=document.getElementById(id);if(e)e.value=v;});
+    if(s.watchlist){watchlist=s.watchlist;renderWatchlist();}
+    if(s.journalEntries){journalEntries=s.journalEntries;renderJournal();}
+    if(s.liveData&&s.liveData.currentPrice){
+      liveData=s.liveData;
+      updateDataPanel();
+      document.getElementById('h-last-fetch').textContent=`📦 ${liveData.fetchTime||'Хуучин'}`;
+    }
+    calcAll();
+  }catch(e){}
+}
+
+function newTrade() {
+  if(!confirm('Шинэ trade эхлэх үү?')) return;
+  document.querySelectorAll('input[type=radio]').forEach(r=>r.checked=false);
+  document.querySelectorAll('input[type=checkbox]').forEach(c=>c.checked=false);
+  document.querySelectorAll('input[type=number],textarea').forEach(i=>i.value='');
+  document.getElementById('h-ticker').value='';
+  document.getElementById('ps-risk').value='1.5';
+  watchlist=[];renderWatchlist();
+  liveData={};
+  document.getElementById('data-panel').classList.remove('visible');
+  document.getElementById('h-last-fetch').textContent='МЭДЭЭЛЭЛ БАЙХГҮЙ';
+  calcAll();
+  switchTab(1,document.querySelector('.tab-btn'));
+  save();
+}
+
+// ════════════════════════════════════
+// EVENT LISTENERS
+// ════════════════════════════════════
+document.addEventListener('change', e => {
+  if(e.target.type==='radio'||e.target.type==='checkbox') { calcAll(); save(); }
+});
+document.addEventListener('input', e => {
+  if(e.target.matches('input[type=number],select,textarea')) { calcAll(); save(); }
+});
+
+// Pivot dist live calc
+document.getElementById('pivot-price')?.addEventListener('input', () => {
+  if(liveData.currentPrice && document.getElementById('pivot-price').value) {
+    const p=parseFloat(document.getElementById('pivot-price').value);
+    const dist=((liveData.currentPrice-p)/p*100);
+    document.getElementById('pivot-dist-val').textContent=dist.toFixed(2)+'%';
+    document.getElementById('cur-price-setup').textContent='$'+liveData.currentPrice.toFixed(2);
+    if(dist>=0&&dist<3) autoSelect('s_dist','2');
+    else if(dist>=0&&dist<5) autoSelect('s_dist','1');
+    else if(dist>=0&&dist<8) autoSelect('s_dist','0.5');
+    else autoSelect('s_dist','0');
+  }
+});
+
+// Auto-refresh every 5 minutes if ticker is set
+setInterval(() => {
+  const t = document.getElementById('h-ticker').value;
+  if(t) fetchAllData();
+}, 5 * 60 * 1000);
+
+// ════════════════════════════════════
+// INIT
+// ════════════════════════════════════
+loadState();
+renderWatchlist();
+renderJournal();
+calcAll();
+</script>
+</body>
+</html>

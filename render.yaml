@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: its-pro-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    envVars:
+      - key: FINNHUB_KEY
+        value: d7pk4jhr01qlb0aa9m0g
