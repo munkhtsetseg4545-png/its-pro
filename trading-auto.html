@@ -1122,6 +1122,16 @@ function updateDataPanel() {
   const chgColor = d.change >= 0 ? 'var(--green)' : 'var(--red)';
   const chgSign = d.change >= 0 ? '+' : '';
 
+  const regimeMap = {
+    'strong_uptrend':      { mn: 'Хүчтэй өсөлт',     color: 'var(--green)' },
+    'counter_trend_rally': { mn: 'Эсрэг чиглэлийн өсөлт', color: 'var(--yellow)' },
+    'pullback':            { mn: 'Буцалт',             color: 'var(--yellow)' },
+    'downtrend':           { mn: 'Уналт',              color: 'var(--red)' },
+  };
+  const regimeInfo = regimeMap[d.regime] || { mn: d.regime || 'N/A', color: 'var(--txt2)' };
+  const regimeMn = regimeInfo.mn;
+  const regimeColor = regimeInfo.color;
+
   document.getElementById('data-grid').innerHTML = `
     <div class="data-cell">
       <div class="data-cell-lbl">${d.ticker} Үнэ</div>
