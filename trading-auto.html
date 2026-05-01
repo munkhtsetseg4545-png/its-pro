@@ -1183,6 +1183,16 @@ function updateDataPanel() {
       <div class="data-cell-val" style="font-size:13px;color:var(--gold);">${d.fetchTime}</div>
       <div class="data-cell-sub">Yahoo Finance</div>
     </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">Regime</div>
+      <div class="data-cell-val" style="font-size:12px;color:${regimeColor};">${regimeMn}</div>
+      <div class="data-cell-sub">${d.short_term||''} / ${d.long_term||''}</div>
+    </div>
+    <div class="data-cell">
+      <div class="data-cell-lbl">Momentum</div>
+      <div class="data-cell-val" style="font-size:13px;color:${d.momentum==='strong'?'var(--red)':d.momentum==='weak'?'var(--green)':'var(--yellow)'};">${d.momentum==='strong'?'Хэт өндөр':d.momentum==='weak'?'Хэт бага':'Тэнцвэртэй'}</div>
+      <div class="data-cell-sub">EMA align: ${d.ema_align||0}/3</div>
+    </div>
   `;
 }
 
