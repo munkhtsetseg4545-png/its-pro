@@ -1083,7 +1083,12 @@ async function fetchAllData() {
       revGrowth: d.rev_growth,
       nextEarnings: d.next_earnings,
       vixPrice, spyPrice, spyEMA200, spyAbove200,
-      fetchTime: new Date().toLocaleTimeString()
+      fetchTime: new Date().toLocaleTimeString(),
+      short_term: d.short_term || 'N/A',
+      long_term: d.long_term || 'N/A',
+      regime: d.regime || 'unknown',
+      momentum: d.momentum || 'neutral',
+      ema_align: d.ema_align ?? 0,
     };
 
     setFetchMsg('Мэдээллийг боловсруулж байна...');
