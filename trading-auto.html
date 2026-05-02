@@ -1084,10 +1084,10 @@ async function fetchAllData() {
       nextEarnings: d.next_earnings,
       vixPrice, spyPrice, spyEMA200, spyAbove200,
       fetchTime: new Date().toLocaleTimeString(),
-      short_term: d.short_term || 'N/A',
-      long_term: d.long_term || 'N/A',
+      short_term: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
+      long_term: d.long_term === 'bullish' ? 'BULL' : 'BEAR',
       regime: d.regime || 'unknown',
-      momentum: d.momentum || 'neutral',
+      momentum: getMomentum(d.rsi14 || 50),
       ema_align: d.ema_align ?? 0,
     };
 
@@ -1464,6 +1464,35 @@ function calcWatchScore(ticker) {
     el.textContent = norm.toFixed(1)+'/7';
     el.style.color = norm>=5?'var(--green)':norm>=3.5?'var(--yellow)':'var(--red)';
   }
+}
+
+// ════════════════════════════════════
+// HELPER FUNCTIONS
+// ════════════════════════════════════
+function getMomentum(rsi) {
+  if (rsi >= 70) return "STRONG_MOMENTUM";
+  if (rsi <= 30) return "OVERSOLD";
+  return "NEUTRAL";
+}
+
+function getRegime(shortTerm, longTerm) {
+  if (shortTerm === "BULL" && longTerm === "BULL") return "BULL_TREND";
+  if (shortTerm === "BEAR" && longTerm === "BEAR") return "BEAR_TREND";
+  if (shortTerm === "BULL" && longTerm === "BEAR") return "COUNTER_TREND_RALLY";
+  if (shortTerm === "BEAR" && longTerm === "BULL") return "PULLBACK";
+  return "UNKNOWN";
+}
+
+function calculateScore(shortTerm, longTerm, momentum, market) {
+  let score = 0;
+  if (shortTerm === "BULL") score += 25;
+  if (longTerm === "BULL") score += 15;
+  if (momentum === "STRONG_MOMENTUM") score += 20;
+  else if (momentum === "NEUTRAL") score += 10;
+  if (market.spyAbove200) score += 10;
+  if (market.vixNormal) score += 10;
+  if (market.adUp) score += 10;
+  return score;
 }
 
 // ════════════════════════════════════
