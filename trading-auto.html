@@ -1503,19 +1503,25 @@ function getVal(name) {
   return el ? parseFloat(el.value) : 0;
 }
 
+function getFinalDecision(score, regimeScore) {
+  if (score >= 60 && regimeScore >= 6) return "🟢 BUY / TRADE";
+  if (score >= 40 && regimeScore >= 5) return "🟡 WATCH / SMALL POSITION";
+  return "🔴 CASH / NO TRADE";
+}
+
 function calcRegime() {
   const vals = ['r_idx','r_vix','r_ad','r_pct','r_fed','r_yc','r_cyc','r_sec','r_ms'].map(n=>getVal(n));
   const raw = vals.reduce((a,b)=>a+b,0);
-  const score = Math.min(10, Math.round((raw/14)*100)/10);
+  const score = Math.min(10, Math.round((raw/7)*100)/10);
   document.getElementById('rscore').textContent = score.toFixed(1);
 
   const bear = document.getElementById('rc4');
   document.getElementById('bear-banner').classList.toggle('vis', bear?.checked);
 
   const v = document.getElementById('rverdict');
-  if (score >= 7) { v.className='banner b-g vis'; v.textContent='✅ Зах зээл хүчтэй — Position хийнэ'; }
+  if (score >= 7) { v.className='banner b-g vis'; v.textContent='✅ Зах зээл хүчтэй'; }
   else if (score >= 4) { v.className='banner b-y vis'; v.textContent='⚠️ Нейтрал — Болгоомжтой'; }
-  else { v.className='banner b-r vis'; v.textContent='❌ Сул — Cash-д байна'; }
+  else { v.className='banner b-r vis'; v.textContent='❌ Зах зээл сул'; }
 
   const badge = document.getElementById('h-regime');
   if (liveData && liveData.short_term && liveData.long_term) {
@@ -1768,6 +1774,13 @@ function calcAll() {
   }
   finalScore = Math.min(70, Math.max(0, finalScore));
   document.getElementById('h-score').textContent=finalScore;
+  // Unified final decision
+  const rs2=parseFloat(document.getElementById('rscore').textContent)||0;
+  const decision = getFinalDecision(finalScore, rs2);
+  const v2 = document.getElementById('rverdict');
+  if (decision.startsWith('🟢')) { v2.className='banner b-g vis'; v2.textContent=decision; }
+  else if (decision.startsWith('🟡')) { v2.className='banner b-y vis'; v2.textContent=decision; }
+  else { v2.className='banner b-r vis'; v2.textContent=decision; }
   // Progress
   const checks=[rs>0,ss>0,ts>0,parseFloat(document.getElementById('ps-nav').value)>0,
     document.querySelector('input[name="e_t"]:checked'),
