@@ -331,55 +331,29 @@ textarea.inp { resize:vertical; min-height:70px; font-family:var(--body); font-s
         </div>
       </div>
       <div class="card">
-        <div class="card-hd">🏛 МАКРО ОРЧИН</div>
-        <div class="rrow">
-          <div class="rlbl">Fed горим</div>
-          <div class="ropts">
-            <div class="ropt g"><input type="radio" name="r_fed" value="1" id="rf1"><label for="rf1">Хүү бууруулж байна ✅</label></div>
-            <div class="ropt y"><input type="radio" name="r_fed" value="0.5" id="rf2"><label for="rf2">Хэвээр ⚠️</label></div>
-            <div class="ropt r"><input type="radio" name="r_fed" value="0" id="rf3"><label for="rf3">Хүү өсгөж байна ❌</label></div>
-          </div>
+        <div class="card-hd">🏛 МАКРО ОРЧИН <span class="auto-tag">AUTO</span></div>
+        <div id="macro-auto-result" style="padding:10px 12px;font-size:13px;color:var(--txt2);min-height:40px;">
+          Өгөгдөл татаагүй байна...
         </div>
-        <div class="rrow">
-          <div class="rlbl">Yield Curve</div>
-          <div class="ropts">
-            <div class="ropt g"><input type="radio" name="r_yc" value="1" id="ry1"><label for="ry1">Хэвийн ✅</label></div>
-            <div class="ropt y"><input type="radio" name="r_yc" value="0.5" id="ry2"><label for="ry2">Хавтгай ⚠️</label></div>
-            <div class="ropt r"><input type="radio" name="r_yc" value="0" id="ry3"><label for="ry3">Урвуу ❌</label></div>
-          </div>
+        <div style="padding:4px 12px 10px;font-size:11px;color:var(--txt3);">
+          VIX (0–3) + SPY vs EMA200 (0–3) + A/D (0–2) = max 8
         </div>
-        <div class="rrow">
-          <div class="rlbl">Зах зээлийн мөчлөг</div>
-          <div class="ropts">
-            <div class="ropt g"><input type="radio" name="r_cyc" value="2" id="rc1"><label for="rc1">Early Bull ✅✅</label></div>
-            <div class="ropt g"><input type="radio" name="r_cyc" value="1.5" id="rc2"><label for="rc2">Mid Bull ✅</label></div>
-            <div class="ropt y"><input type="radio" name="r_cyc" value="0.5" id="rc3"><label for="rc3">Late Bull ⚠️</label></div>
-            <div class="ropt r"><input type="radio" name="r_cyc" value="0" id="rc4"><label for="rc4">Bear ❌</label></div>
-          </div>
-        </div>
+        <input type="hidden" name="r_fed" id="r_fed_h" value="0.5">
+        <input type="hidden" name="r_yc" id="r_yc_h" value="0.5">
+        <input type="hidden" name="r_cyc" id="r_cyc_h" value="1">
       </div>
     </div>
     <div>
       <div class="card">
         <div class="card-hd">🔬 SECTOR & АРИЛЖАА</div>
         <div class="rrow">
-          <div class="rlbl">Sector тэргүүлэгч</div>
-          <div class="ropts">
-            <div class="ropt g"><input type="radio" name="r_sec" value="1" id="rs1"><label for="rs1">Tech/Growth ✅</label></div>
-            <div class="ropt y"><input type="radio" name="r_sec" value="0.5" id="rs2"><label for="rs2">Defensive ⚠️</label></div>
-            <div class="ropt"><input type="radio" name="r_sec" value="0.5" id="rs3"><label for="rs3">Energy</label></div>
-            <div class="ropt"><input type="radio" name="r_sec" value="0.5" id="rs4"><label for="rs4">Financial</label></div>
-          </div>
+          <div class="rlbl">Sector жагсаалт <span class="auto-tag">AUTO</span></div>
         </div>
-        <div class="rrow">
-          <div class="rlbl">Миний sector</div>
-          <div class="ropts">
-            <div class="ropt g"><input type="radio" name="r_ms" value="2" id="rms1"><label for="rms1">Тэргүүлэгч ✅✅</label></div>
-            <div class="ropt g"><input type="radio" name="r_ms" value="1.5" id="rms2"><label for="rms2">2-3-р байр ✅</label></div>
-            <div class="ropt y"><input type="radio" name="r_ms" value="0.5" id="rms3"><label for="rms3">Дунд ⚠️</label></div>
-            <div class="ropt r"><input type="radio" name="r_ms" value="0" id="rms4"><label for="rms4">Сул ❌</label></div>
-          </div>
+        <div id="sector-auto-result" style="padding:4px 12px 10px;font-size:12px;color:var(--txt2);min-height:50px;">
+          Өгөгдөл татаагүй байна...
         </div>
+        <input type="hidden" name="r_sec" id="r_sec_h" value="0.5">
+        <input type="hidden" name="r_ms" id="r_ms_h" value="1">
         <div class="div"></div>
         <div class="rrow">
           <div class="rlbl">Арилжааны төрөл</div>
@@ -1048,17 +1022,34 @@ async function fetchAllData() {
     const d = await fetchQuote(ticker);
     if (d.error) throw new Error(d.error);
 
-    // Fetch VIX & SPY in parallel
-    setFetchMsg('VIX + SPY татаж байна...');
-    const [vixData, spyData] = await Promise.allSettled([
+    // Fetch VIX, SPY, Sector ETFs in parallel
+    setFetchMsg('VIX + SPY + Sector ETF татаж байна...');
+    const [vixData, spyData, xlkData, xlfData, xleData, xlvData, xlyData] = await Promise.allSettled([
       fetchQuote('%5EVIX'),
-      fetchQuote('SPY')
+      fetchQuote('SPY'),
+      fetchQuote('XLK'),
+      fetchQuote('XLF'),
+      fetchQuote('XLE'),
+      fetchQuote('XLV'),
+      fetchQuote('XLY'),
     ]);
 
     const vixPrice = vixData.status === 'fulfilled' && !vixData.value.error ? vixData.value.price : 20;
-    const spyPrice = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.price : 0;
+    const spyPrice = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.price : 500;
     const spyEMA200 = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.ema200 : 0;
     const spyAbove200 = spyPrice > spyEMA200;
+
+    // Sector relative strength vs SPY
+    const getP = (r) => r.status === 'fulfilled' && !r.value.error ? r.value.price : null;
+    const sectorPrices = {
+      XLK: getP(xlkData), XLF: getP(xlfData), XLE: getP(xleData),
+      XLV: getP(xlvData), XLY: getP(xlyData)
+    };
+    const sectorNames = { XLK:'Tech', XLF:'Financial', XLE:'Energy', XLV:'Healthcare', XLY:'Consumer' };
+    const sectorRanked = Object.entries(sectorPrices)
+      .filter(([,p]) => p !== null && spyPrice > 0)
+      .map(([sym, p]) => ({ sym, name: sectorNames[sym], rs: p / spyPrice }))
+      .sort((a, b) => b.rs - a.rs);
 
     liveData = {
       ticker,
@@ -1082,7 +1073,7 @@ async function fetchAllData() {
       epsGrowth: d.eps_growth,
       revGrowth: d.rev_growth,
       nextEarnings: d.next_earnings,
-      vixPrice, spyPrice, spyEMA200, spyAbove200,
+      vixPrice, spyPrice, spyEMA200, spyAbove200, sectorRanked,
       fetchTime: new Date().toLocaleTimeString(),
       short_term: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
       long_term: d.long_term === 'bullish' ? 'BULL' : 'BEAR',
@@ -1233,16 +1224,58 @@ function autoFillRegime() {
   else if (d.vixPrice < 35) autoSelect('r_vix', '0.5');
   else autoSelect('r_vix', '0');
 
-  // Show VIX live value
   document.getElementById('vix-live').textContent = `[${d.vixPrice?.toFixed(1)}]`;
 
-  // SPY above 200 → percent above 200 estimate (rough: if spy>200ema, likely >50% stocks above)
+  // SPY above 200 → percent above estimate
   if (d.spyAbove200) {
     const pctAbove = ((d.spyPrice - d.spyEMA200) / d.spyEMA200 * 100);
     if (pctAbove > 5) autoSelect('r_pct', '2');
     else autoSelect('r_pct', '1');
   } else {
     autoSelect('r_pct', '0');
+  }
+
+  // AUTO MACRO SCORE
+  const macroScore = calculateMacroScore(d.vixPrice, d.spyPrice, d.spyEMA200, 'up');
+  const macroRegime = getMarketRegime(macroScore);
+  liveData.macroScore = macroScore;
+  liveData.macroRegime = macroRegime;
+  const macroEl = document.getElementById('macro-auto-result');
+  if (macroEl) macroEl.innerHTML =
+    `<span class="auto-tag">AUTO</span> Macro: <b>${macroScore}/8</b> — ${macroRegime}`;
+
+  // AUTO SECTOR RANKING
+  const sectorEl = document.getElementById('sector-auto-result');
+  if (sectorEl && d.sectorRanked && d.sectorRanked.length > 0) {
+    const rows = d.sectorRanked.map((s, i) => {
+      const medal = i === 0 ? '🥇' : i <= 2 ? '🟢' : '🔴';
+      const label = i === 0 ? 'Тэргүүлэгч' : i <= 2 ? 'Хүчтэй' : 'Сул';
+      return `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:12px;">
+        <span>${medal} ${s.name}</span>
+        <span style="color:${i===0?'var(--green)':i<=2?'var(--yellow)':'var(--red)'}">${label} (${s.rs.toFixed(3)})</span>
+      </div>`;
+    }).join('');
+    sectorEl.innerHTML = `<span class="auto-tag">AUTO</span>${rows}`;
+  }
+
+  // Auto-select sector radio based on top sector
+  if (d.sectorRanked && d.sectorRanked.length > 0) {
+    const top = d.sectorRanked[0];
+    if (top.sym === 'XLK') autoSelect('r_sec', '1');
+    else if (top.sym === 'XLF' || top.sym === 'XLE') autoSelect('r_sec', '0.5');
+    else autoSelect('r_sec', '0.5');
+
+    // My sector rank
+    const mySector = d.sector || '';
+    const sectorMap = { Technology: 'XLK', Financials: 'XLF', Energy: 'XLE',
+      Healthcare: 'XLV', 'Consumer Discretionary': 'XLY' };
+    const myEtf = Object.entries(sectorMap).find(([k]) => mySector.includes(k))?.[1];
+    if (myEtf) {
+      const myRank = d.sectorRanked.findIndex(s => s.sym === myEtf);
+      if (myRank === 0) autoSelect('r_ms', '2');
+      else if (myRank <= 2) autoSelect('r_ms', '1.5');
+      else autoSelect('r_ms', '0.5');
+    }
   }
 }
 
@@ -1469,6 +1502,23 @@ function calcWatchScore(ticker) {
 // ════════════════════════════════════
 // HELPER FUNCTIONS
 // ════════════════════════════════════
+function calculateMacroScore(vix, spy, ema200, adTrend) {
+  let score = 0;
+  if (vix < 15) score += 3;
+  else if (vix <= 25) score += 2;
+  else if (vix <= 35) score += 1;
+  if (spy > ema200) score += 3;
+  if (adTrend === 'up') score += 2;
+  else if (adTrend === 'flat') score += 1;
+  return score; // max = 8
+}
+
+function getMarketRegime(score) {
+  if (score >= 7) return '🟢 Strong Bull';
+  if (score >= 5) return '🟡 Neutral Bull';
+  return '🔴 Weak / Risk Off';
+}
+
 function getMomentum(rsi) {
   if (rsi >= 65) return "Хүчтэй эрч";
   if (rsi <= 30) return "Хэт зарагдсан";
@@ -1510,7 +1560,18 @@ function getFinalDecision(score, regimeScore) {
 }
 
 function calcRegime() {
-  const vals = ['r_idx','r_vix','r_ad','r_pct','r_fed','r_yc','r_cyc','r_sec','r_ms'].map(n=>getVal(n));
+  // Auto-set hidden fields from macroScore if available
+  if (liveData?.macroScore !== undefined) {
+    const ms = liveData.macroScore;
+    // Map macroScore/8 to fed/yc/cyc equivalents
+    document.getElementById('r_fed_h').value = ms >= 6 ? '1' : ms >= 4 ? '0.5' : '0';
+    document.getElementById('r_yc_h').value = ms >= 5 ? '1' : ms >= 3 ? '0.5' : '0';
+    document.getElementById('r_cyc_h').value = ms >= 7 ? '2' : ms >= 5 ? '1.5' : ms >= 3 ? '0.5' : '0';
+  }
+  const vals = ['r_idx','r_vix','r_ad','r_pct','r_fed_h','r_yc_h','r_cyc_h','r_sec_h','r_ms_h'].map(n=>{
+    const el = document.getElementById(n) || document.querySelector(`input[name="${n}"]:checked`);
+    return el ? parseFloat(el.value)||0 : 0;
+  });
   const raw = vals.reduce((a,b)=>a+b,0);
   const score = Math.min(10, Math.round((raw/7)*100)/10);
   document.getElementById('rscore').textContent = score.toFixed(1);
@@ -1774,9 +1835,11 @@ function calcAll() {
   }
   finalScore = Math.min(70, Math.max(0, finalScore));
   document.getElementById('h-score').textContent=finalScore;
-  // Unified final decision
-  const rs2=parseFloat(document.getElementById('rscore').textContent)||0;
-  const decision = getFinalDecision(finalScore, rs2);
+  // Unified final decision using macroScore
+  const macroForDecision = liveData?.macroScore ?? 4;
+  const regimeForDecision = (macroForDecision / 8) * 10; // normalize to /10
+  const rs2=parseFloat(document.getElementById('rscore').textContent)||regimeForDecision;
+  const decision = getFinalDecision(finalScore, Math.max(rs2, regimeForDecision));
   const v2 = document.getElementById('rverdict');
   if (decision.startsWith('🟢')) { v2.className='banner b-g vis'; v2.textContent=decision; }
   else if (decision.startsWith('🟡')) { v2.className='banner b-y vis'; v2.textContent=decision; }
