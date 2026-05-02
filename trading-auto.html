@@ -1205,7 +1205,7 @@ function updateDataPanel() {
     </div>
     <div class="data-cell">
       <div class="data-cell-lbl">Momentum</div>
-      <div class="data-cell-val" style="font-size:13px;color:${d.momentum==='strong'?'var(--red)':d.momentum==='weak'?'var(--green)':'var(--yellow)'};">${d.momentum==='strong'?'Хэт өндөр':d.momentum==='weak'?'Хэт бага':'Тэнцвэртэй'}</div>
+      <div class="data-cell-val" style="font-size:13px;color:${d.momentum==='Хүчтэй эрч'?'var(--red)':d.momentum==='Хэт зарагдсан'?'var(--green)':'var(--yellow)'};">${d.momentum}</div>
       <div class="data-cell-sub">EMA align: ${d.ema_align||0}/3</div>
     </div>
   `;
@@ -1470,9 +1470,9 @@ function calcWatchScore(ticker) {
 // HELPER FUNCTIONS
 // ════════════════════════════════════
 function getMomentum(rsi) {
-  if (rsi >= 70) return "STRONG_MOMENTUM";
-  if (rsi <= 30) return "OVERSOLD";
-  return "NEUTRAL";
+  if (rsi >= 65) return "Хүчтэй эрч";
+  if (rsi <= 30) return "Хэт зарагдсан";
+  return "Тэнцвэртэй";
 }
 
 function getRegime(shortTerm, longTerm) {
@@ -1486,12 +1486,12 @@ function getRegime(shortTerm, longTerm) {
 function calculateScore(shortTerm, longTerm, momentum, market) {
   let score = 0;
   if (shortTerm === "BULL") score += 25;
-  if (longTerm === "BULL") score += 15;
-  if (momentum === "STRONG_MOMENTUM") score += 20;
-  else if (momentum === "NEUTRAL") score += 10;
+  if (longTerm === "BULL") score += 20;
+  if (momentum === "Хүчтэй эрч") score += 15;
+  else if (momentum === "Тэнцвэртэй") score += 8;
   if (market.spyAbove200) score += 10;
   if (market.vixNormal) score += 10;
-  if (market.adUp) score += 10;
+  if (market.volumeOk) score += 10;
   return score;
 }
 
@@ -1518,9 +1518,16 @@ function calcRegime() {
   else { v.className='banner b-r vis'; v.textContent='❌ Сул — Cash-д байна'; }
 
   const badge = document.getElementById('h-regime');
-  if (score>=7){badge.className='badge b-bull';badge.textContent='BULL';}
-  else if(score>=4){badge.className='badge b-neutral';badge.textContent='NEUTRAL';}
-  else{badge.className='badge b-bear';badge.textContent='BEAR';}
+  if (liveData && liveData.short_term && liveData.long_term) {
+    const regime = getRegime(liveData.short_term, liveData.long_term);
+    if (regime === 'BULL_TREND') { badge.className='badge b-bull'; badge.textContent='BULL'; }
+    else if (regime === 'PULLBACK' || regime === 'COUNTER_TREND_RALLY') { badge.className='badge b-neutral'; badge.textContent='NEUTRAL'; }
+    else { badge.className='badge b-bear'; badge.textContent='BEAR'; }
+  } else {
+    if (score>=7){badge.className='badge b-bull';badge.textContent='BULL';}
+    else if(score>=4){badge.className='badge b-neutral';badge.textContent='NEUTRAL';}
+    else{badge.className='badge b-bear';badge.textContent='BEAR';}
+  }
   return score;
 }
 
@@ -1749,7 +1756,17 @@ function calcAll() {
   const rs=parseFloat(document.getElementById('rscore').textContent)||0;
   const ss=parseFloat(document.getElementById('setup-snum').textContent)||0;
   const ts=parseFloat(document.getElementById('tf-snum').textContent)||0;
-  document.getElementById('h-score').textContent=Math.round(rs*2+ss*2+ts);
+  let finalScore;
+  if (liveData && liveData.short_term) {
+    finalScore = calculateScore(liveData.short_term, liveData.long_term, liveData.momentum, {
+      spyAbove200: liveData.spyAbove200,
+      vixNormal: liveData.vixPrice < 25,
+      volumeOk: liveData.volRatio < 1.3
+    });
+  } else {
+    finalScore = Math.round(rs*2+ss*2+ts);
+  }
+  document.getElementById('h-score').textContent=finalScore;
   // Progress
   const checks=[rs>0,ss>0,ts>0,parseFloat(document.getElementById('ps-nav').value)>0,
     document.querySelector('input[name="e_t"]:checked'),
