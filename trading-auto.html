@@ -930,7 +930,7 @@ const API_BASE = 'https://its-pro.onrender.com';
 
 async function checkServer() {
   try {
-    const res = await fetch(API_BASE + '/health', { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(API_BASE + '/health', { signal: AbortSignal.timeout(8000) });
     return res.ok;
   } catch { return false; }
 }
@@ -1024,10 +1024,23 @@ function clearStockData(ticker) {
   if (rscore) rscore.textContent = '0.0';
 }
 
+function normalizeTicker(input) {
+  const t = input.trim().toUpperCase();
+  const map = {
+    'GOOGLE': 'GOOG', 'ALPHABET': 'GOOG', 'GOOGL': 'GOOGL',
+    'TESLA': 'TSLA', 'FACEBOOK': 'META', 'META PLATFORMS': 'META',
+    'AMAZON': 'AMZN', 'APPLE': 'AAPL', 'NVIDIA': 'NVDA',
+    'INTEL': 'INTC', 'MICROSOFT': 'MSFT', 'NETFLIX': 'NFLX',
+  };
+  return map[t] || t;
+}
+
 async function fetchAllData() {
-  const ticker = document.getElementById('h-ticker').value.trim().toUpperCase();
+  const rawInput = document.getElementById('h-ticker').value;
+  const ticker = normalizeTicker(rawInput);
   if (!ticker) { showErr('Ticker оруулна уу'); return; }
 
+  console.log('Fetching ticker:', ticker);
   clearStockData(ticker);
 
   const overlay = document.getElementById('fetch-overlay');
@@ -1041,20 +1054,17 @@ async function fetchAllData() {
     setFetchMsg('Серверт холбогдож байна...');
     const serverOk = await checkServer();
     if (!serverOk) {
-      overlay.classList.remove('vis');
-      btn.classList.remove('loading');
-      btn.textContent = '⚡ AUTO FETCH';
-      const dlBanner = document.getElementById('dl-banner');
-      const srvBanner = document.getElementById('server-banner');
-      if (dlBanner) dlBanner.style.display = 'none';
-      if (srvBanner) srvBanner.style.display = 'block';
-      return;
+      // Render free tier may still be waking up — try fetch anyway
+      console.warn('Health check failed, attempting fetch anyway...');
+      setFetchMsg('Сервер сэрж байна, хүлээнэ үү...');
     }
 
     // Fetch ticker
     setFetchMsg(`${ticker} татаж байна...`);
     const d = await fetchQuote(ticker);
+    console.log('Fetched data:', d);
     if (d.error) throw new Error(d.error);
+    if (!d.price) throw new Error(`${ticker} — хүчинтэй өгөгдөл ирсэнгүй`);
 
     // Fetch VIX, SPY, Sector ETFs in parallel
     setFetchMsg('VIX + SPY + Sector ETF татаж байна...');
