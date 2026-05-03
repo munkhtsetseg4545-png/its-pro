@@ -995,9 +995,40 @@ function setFetchMsg(msg) {
   document.getElementById('fetch-msg').textContent = msg;
 }
 
+function clearStockData(ticker) {
+  // Reset liveData
+  liveData = {};
+  // Hide data panel
+  const panel = document.getElementById('data-panel');
+  if (panel) { panel.classList.remove('visible'); }
+  const grid = document.getElementById('data-grid');
+  if (grid) grid.innerHTML = '';
+  // Reset header badges
+  document.getElementById('h-score').textContent = '0';
+  document.getElementById('h-regime').className = 'badge b-neutral';
+  document.getElementById('h-regime').textContent = 'NEUTRAL';
+  document.getElementById('h-last-fetch').textContent = 'МЭДЭЭЛЭЛ БАЙХГҮЙ';
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('h-pct').textContent = '0';
+  document.getElementById('h-step').textContent = '1';
+  document.getElementById('data-live-badge').style.display = 'none';
+  // Reset verdict banner
+  const v = document.getElementById('rverdict');
+  if (v) { v.className = 'banner b-r vis'; v.textContent = `${ticker} — Өгөгдөл татаж байна...`; }
+  // Reset macro/sector displays
+  const macroEl = document.getElementById('macro-auto-result');
+  if (macroEl) macroEl.innerHTML = 'Өгөгдөл татаагүй байна...';
+  const sectorEl = document.getElementById('sector-auto-result');
+  if (sectorEl) sectorEl.innerHTML = 'Өгөгдөл татаагүй байна...';
+  const rscore = document.getElementById('rscore');
+  if (rscore) rscore.textContent = '0.0';
+}
+
 async function fetchAllData() {
   const ticker = document.getElementById('h-ticker').value.trim().toUpperCase();
   if (!ticker) { showErr('Ticker оруулна уу'); return; }
+
+  clearStockData(ticker);
 
   const overlay = document.getElementById('fetch-overlay');
   const btn = document.getElementById('fetch-btn');
@@ -1103,6 +1134,18 @@ async function fetchAllData() {
   } catch (err) {
     console.error(err);
     showErr(`Алдаа: ${err.message}`);
+    // Show N/A state for the attempted ticker
+    const panel = document.getElementById('data-panel');
+    const grid = document.getElementById('data-grid');
+    if (panel && grid) {
+      panel.classList.add('visible');
+      grid.innerHTML = `<div style="padding:12px;color:var(--red);font-family:var(--mono);font-size:13px;">
+        ❌ <b>${ticker}</b> — Өгөгдөл олдсонгүй / Fetch амжилтгүй<br>
+        <span style="color:var(--txt3);font-size:11px;">Price: N/A | RSI: N/A | EMA: N/A | ATR: N/A</span>
+      </div>`;
+    }
+    const v = document.getElementById('rverdict');
+    if (v) { v.className='banner b-r vis'; v.textContent=`❌ ${ticker} — Өгөгдөл байхгүй`; }
   } finally {
     overlay.classList.remove('vis');
     btn.classList.remove('loading');
