@@ -240,6 +240,10 @@ textarea.inp { resize:vertical; min-height:70px; font-family:var(--body); font-s
 
 <!-- ERROR TOAST -->
 <div class="err-toast" id="err-toast"></div>
+<div id="test-panel" style="display:none;flex-wrap:wrap;gap:6px;padding:8px 16px;background:rgba(255,214,0,.05);border-bottom:1px solid var(--yellowd);">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--yellow);align-self:center;">SAMPLE DATA:</span>
+  <button onclick="loadSampleData('AAPL')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">AAPL</button> <button onclick="loadSampleData('AMZN')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">AMZN</button> <button onclick="loadSampleData('GOOG')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">GOOG</button> <button onclick="loadSampleData('META')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">META</button> <button onclick="loadSampleData('TSLA')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">TSLA</button> <button onclick="loadSampleData('NVDA')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">NVDA</button> <button onclick="loadSampleData('AMD')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">AMD</button> <button onclick="loadSampleData('INTC')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">INTC</button> <button onclick="loadSampleData('DUOL')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">DUOL</button>
+</div>
 <div id="server-banner" style="display:none;background:rgba(220,50,50,.1);border-bottom:1px solid var(--red);color:var(--red);font-family:var(--head);font-size:11px;font-weight:600;letter-spacing:1px;padding:8px 16px;text-align:center;position:relative;z-index:1;">⚠️ Сервертэй холбогдох боломжгүй байна. Render.com шалгана уу.</div>
 <div id="dl-banner" style="display:none;background:rgba(200,160,32,.1);border-bottom:1px solid var(--gold);color:var(--gold);font-family:var(--head);font-size:11px;font-weight:600;letter-spacing:1px;padding:8px 16px;text-align:center;position:relative;z-index:1;">
   ⚠️ Claude.ai дотор AUTO FETCH ажиллахгүй &nbsp;|&nbsp; <span style="color:var(--green);">Файлыг ↓ татаж аваад Chrome/Safari дээр нээнэ үү — тэгвэл бүрэн ажиллана</span>
@@ -255,6 +259,7 @@ textarea.inp { resize:vertical; min-height:70px; font-family:var(--body); font-s
       <input id="h-ticker" type="text" placeholder="NVDA" maxlength="6" onkeydown="if(event.key==='Enter')fetchAllData()">
     </div>
     <button class="btn-fetch" id="fetch-btn" onclick="fetchAllData()">⚡ AUTO FETCH</button>
+    <button class="btn-fetch" style="border-color:var(--yellow);color:var(--yellow);font-size:10px;" onclick="document.getElementById('test-panel').style.display=document.getElementById('test-panel').style.display==='none'?'flex':'none'">🧪 TEST</button>
     <div class="badges">
       <div class="badge b-score">SCORE: <span id="h-score">0</span>/70</div>
       <div class="badge b-neutral" id="h-regime">NEUTRAL</div>
@@ -926,24 +931,115 @@ function switchTab(n, el) {
 // ════════════════════════════════════
 // YAHOO FINANCE FETCH — multi-proxy fallback
 // ════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// LAYER 0: CONSTANTS & SAMPLE DATA
+// ════════════════════════════════════════════════════════════════
 const API_BASE = 'https://its-pro.onrender.com';
 
-async function checkServer() {
+const SAMPLE_DATA = {
+  AAPL: { price:211.50, change_pct:0.44, rsi14:58.2, atr14:4.21, ema21:208.10, ema50:205.30, ema200:196.40, vol_ratio:1.12, high_52w:237.23, low_52w:164.08, dist_from_52h:10.8, prev_close:210.58, avg_vol:52000000, cur_vol:58000000, sector:'Technology', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  AMZN: { price:212.80, change_pct:1.20, rsi14:64.5, atr14:5.80, ema21:208.50, ema50:201.20, ema200:188.60, vol_ratio:1.35, high_52w:242.52, low_52w:151.61, dist_from_52h:12.2, prev_close:210.28, avg_vol:38000000, cur_vol:51000000, sector:'Consumer Discretionary', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  GOOG: { price:172.40, change_pct:0.85, rsi14:61.3, atr14:4.10, ema21:169.20, ema50:165.80, ema200:158.30, vol_ratio:0.95, high_52w:207.05, low_52w:140.53, dist_from_52h:16.7, prev_close:170.93, avg_vol:22000000, cur_vol:20900000, sector:'Technology', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  META: { price:584.50, change_pct:1.55, rsi14:66.8, atr14:14.20, ema21:570.10, ema50:548.30, ema200:498.20, vol_ratio:1.28, high_52w:638.40, low_52w:390.93, dist_from_52h:8.5, prev_close:575.62, avg_vol:14000000, cur_vol:17920000, sector:'Technology', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  TSLA: { price:284.80, change_pct:-1.20, rsi14:52.1, atr14:12.50, ema21:280.30, ema50:272.10, ema200:248.60, vol_ratio:1.05, high_52w:414.50, low_52w:138.80, dist_from_52h:31.2, prev_close:288.22, avg_vol:82000000, cur_vol:86100000, sector:'Consumer Discretionary', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  NVDA: { price:876.40, change_pct:2.10, rsi14:71.2, atr14:28.50, ema21:848.20, ema50:810.30, ema200:682.10, vol_ratio:1.62, high_52w:974.00, low_52w:462.36, dist_from_52h:10.0, prev_close:858.22, avg_vol:42000000, cur_vol:67920000, sector:'Technology', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  AMD:  { price:158.30, change_pct:0.65, rsi14:55.4, atr14:6.20, ema21:155.10, ema50:150.80, ema200:148.20, vol_ratio:0.88, high_52w:227.30, low_52w:122.17, dist_from_52h:30.3, prev_close:157.28, avg_vol:48000000, cur_vol:42240000, sector:'Technology', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+  INTC: { price:22.10, change_pct:-0.45, rsi14:38.2, atr14:0.92, ema21:23.40, ema50:25.10, ema200:30.20, vol_ratio:0.72, high_52w:46.45, low_52w:18.51, dist_from_52h:52.4, prev_close:22.20, avg_vol:62000000, cur_vol:44640000, sector:'Technology', short_term:'bearish', long_term:'bearish', regime:'downtrend', ema_align:0 },
+  DUOL: { price:348.20, change_pct:1.85, rsi14:68.4, atr14:12.80, ema21:338.50, ema50:318.20, ema200:268.40, vol_ratio:1.42, high_52w:388.90, low_52w:152.57, dist_from_52h:10.5, prev_close:341.84, avg_vol:1800000, cur_vol:2556000, sector:'Technology', short_term:'bullish', long_term:'bullish', regime:'strong_uptrend', ema_align:3 },
+};
+
+// ════════════════════════════════════════════════════════════════
+// LAYER 1: DATA LAYER
+// ════════════════════════════════════════════════════════════════
+
+function normalizeTicker(input) {
+  const t = (input || '').trim().toUpperCase();
+  const map = {
+    'GOOGLE':'GOOG','ALPHABET':'GOOG','TESLA':'TSLA',
+    'FACEBOOK':'META','META PLATFORMS':'META',
+    'AMAZON':'AMZN','APPLE':'AAPL','NVIDIA':'NVDA',
+    'INTEL':'INTC','MICROSOFT':'MSFT','NETFLIX':'NFLX',
+  };
+  return map[t] || t;
+}
+
+async function fetchStockData(ticker) {
+  // Try real API first
   try {
-    const res = await fetch(API_BASE + '/health', { signal: AbortSignal.timeout(8000) });
-    return res.ok;
-  } catch { return false; }
+    const res = await fetch(`${API_BASE}/quote/${ticker}`, {
+      signal: AbortSignal.timeout(20000)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    if (!d.price || d.price === 0) throw new Error('price missing');
+
+    console.log('✅ Real API data:', ticker, d.price);
+    return { success: true, source: 'api', raw: d,
+      ticker, price: d.price, changePercent: d.change_pct,
+      rsi: d.rsi14, atr: d.atr14,
+      ema21: d.ema21, ema50: d.ema50, ema200: d.ema200,
+      volRatio: d.vol_ratio, avgVol: d.avg_vol, curVol: d.cur_vol,
+      high52: d.high_52w, low52: d.low_52w, distFrom52h: d.dist_from_52h,
+      prevClose: d.prev_close, sector: d.sector,
+      shortTerm: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
+      longTerm:  d.long_term  === 'bullish' ? 'BULL' : 'BEAR',
+      regime: d.regime || 'unknown', emaAlign: d.ema_align ?? 0,
+    };
+  } catch (apiErr) {
+    console.warn('⚠️ API failed:', apiErr.message, '— trying sample data');
+    // Fallback to sample data
+    if (SAMPLE_DATA[ticker]) {
+      const d = SAMPLE_DATA[ticker];
+      console.log('📦 Using sample data for:', ticker);
+      return { success: true, source: 'sample', raw: d,
+        ticker, price: d.price, changePercent: d.change_pct,
+        rsi: d.rsi14, atr: d.atr14,
+        ema21: d.ema21, ema50: d.ema50, ema200: d.ema200,
+        volRatio: d.vol_ratio, avgVol: d.avg_vol, curVol: d.cur_vol,
+        high52: d.high_52w, low52: d.low_52w, distFrom52h: d.dist_from_52h,
+        prevClose: d.prev_close, sector: d.sector,
+        shortTerm: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
+        longTerm:  d.long_term  === 'bullish' ? 'BULL' : 'BEAR',
+        regime: d.regime || 'unknown', emaAlign: d.ema_align ?? 0,
+      };
+    }
+    return { success: false, ticker, error: 'FETCH_FAILED', message: apiErr.message };
+  }
 }
 
-async function yahooFetch(ticker) {
-  // This is kept for compatibility but not used directly
-  throw new Error('Use fetchQuote() instead');
+async function fetchMarketData() {
+  const results = await Promise.allSettled([
+    fetch(`${API_BASE}/quote/%5EVIX`, { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+    fetch(`${API_BASE}/quote/SPY`,   { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+    fetch(`${API_BASE}/quote/XLK`,   { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+    fetch(`${API_BASE}/quote/XLF`,   { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+    fetch(`${API_BASE}/quote/XLE`,   { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+    fetch(`${API_BASE}/quote/XLV`,   { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+    fetch(`${API_BASE}/quote/XLY`,   { signal: AbortSignal.timeout(10000) }).then(r=>r.json()),
+  ]);
+  const get = (r) => r.status === 'fulfilled' && !r.value?.error ? r.value : null;
+  const vix = get(results[0]); const spy = get(results[1]);
+  const etfs = { XLK: get(results[2]), XLF: get(results[3]), XLE: get(results[4]), XLV: get(results[5]), XLY: get(results[6]) };
+  const names = { XLK:'Tech', XLF:'Financial', XLE:'Energy', XLV:'Healthcare', XLY:'Consumer' };
+  const spyPrice = spy?.price || 500;
+  const sectorRanked = Object.entries(etfs)
+    .filter(([,d]) => d?.price)
+    .map(([sym, d]) => ({ sym, name: names[sym], rs: d.price / spyPrice }))
+    .sort((a, b) => b.rs - a.rs);
+  return {
+    vixPrice: vix?.price || 20,
+    spyPrice, spyEMA200: spy?.ema200 || 0,
+    spyAbove200: spyPrice > (spy?.ema200 || 0),
+    sectorRanked,
+  };
 }
 
+// Compatibility shim for watchlist
 async function fetchQuote(ticker) {
-  const res = await fetch(`${API_BASE}/quote/${ticker}`, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`${ticker} олдсонгүй`);
-  return await res.json();
+  const data = await fetchStockData(ticker);
+  if (data.success) return data.raw || {};
+  throw new Error(data.message || 'Fetch failed');
 }
 
 // RSI calculation
@@ -995,53 +1091,116 @@ function setFetchMsg(msg) {
   document.getElementById('fetch-msg').textContent = msg;
 }
 
-function clearStockData(ticker) {
-  // Reset liveData
+// ════════════════════════════════════════════════════════════════
+// LAYER 4: UI FUNCTIONS
+// ════════════════════════════════════════════════════════════════
+
+function clearUI(ticker) {
   liveData = {};
-  // Hide data panel
   const panel = document.getElementById('data-panel');
-  if (panel) { panel.classList.remove('visible'); }
-  const grid = document.getElementById('data-grid');
-  if (grid) grid.innerHTML = '';
-  // Reset header badges
+  const grid  = document.getElementById('data-grid');
+  if (panel) panel.classList.remove('visible');
+  if (grid)  grid.innerHTML = '';
   document.getElementById('h-score').textContent = '0';
-  document.getElementById('h-regime').className = 'badge b-neutral';
-  document.getElementById('h-regime').textContent = 'NEUTRAL';
+  const regime = document.getElementById('h-regime');
+  if (regime) { regime.className = 'badge b-neutral'; regime.textContent = 'NEUTRAL'; }
   document.getElementById('h-last-fetch').textContent = 'МЭДЭЭЛЭЛ БАЙХГҮЙ';
   document.getElementById('prog-fill').style.width = '0%';
   document.getElementById('h-pct').textContent = '0';
   document.getElementById('h-step').textContent = '1';
   document.getElementById('data-live-badge').style.display = 'none';
-  // Reset verdict banner
-  const v = document.getElementById('rverdict');
-  if (v) { v.className = 'banner b-r vis'; v.textContent = `${ticker} — Өгөгдөл татаж байна...`; }
-  // Reset macro/sector displays
   const macroEl = document.getElementById('macro-auto-result');
   if (macroEl) macroEl.innerHTML = 'Өгөгдөл татаагүй байна...';
   const sectorEl = document.getElementById('sector-auto-result');
   if (sectorEl) sectorEl.innerHTML = 'Өгөгдөл татаагүй байна...';
-  const rscore = document.getElementById('rscore');
-  if (rscore) rscore.textContent = '0.0';
+  const rs = document.getElementById('rscore');
+  if (rs) rs.textContent = '0.0';
 }
 
-function normalizeTicker(input) {
-  const t = input.trim().toUpperCase();
-  const map = {
-    'GOOGLE': 'GOOG', 'ALPHABET': 'GOOG', 'GOOGL': 'GOOGL',
-    'TESLA': 'TSLA', 'FACEBOOK': 'META', 'META PLATFORMS': 'META',
-    'AMAZON': 'AMZN', 'APPLE': 'AAPL', 'NVIDIA': 'NVDA',
-    'INTEL': 'INTC', 'MICROSOFT': 'MSFT', 'NETFLIX': 'NFLX',
-  };
-  return map[t] || t;
+function renderError(ticker, error) {
+  const panel = document.getElementById('data-panel');
+  const grid  = document.getElementById('data-grid');
+  if (panel && grid) {
+    panel.classList.add('visible');
+    grid.innerHTML = `<div style="padding:12px;color:var(--red);font-family:var(--mono);font-size:13px;">
+      ❌ <b>${ticker}</b> — Өгөгдөл олдсонгүй<br>
+      <span style="color:var(--txt3);font-size:11px;">
+        Энэ browser дэмждэггүй байж магадгүй. Safari/Chrome дээр нээнэ үү.
+      </span><br>
+      <span style="color:var(--txt2);font-size:11px;margin-top:6px;display:block;">
+        💡 TEST товч ашиглана уу: <b>AAPL · AMZN · GOOG · META · TSLA · NVDA · AMD · INTC · DUOL</b>
+      </span>
+    </div>`;
+  }
+  const v = document.getElementById('rverdict');
+  if (v) { v.className='banner b-r vis'; v.textContent=`❌ ${ticker} — Өгөгдөл байхгүй`; }
+  document.getElementById('h-last-fetch').textContent = '❌ Амжилтгүй';
 }
+
+function renderStockData(data, market) {
+  liveData = {
+    ticker: data.ticker,
+    currentPrice: data.price, prevClose: data.prevClose,
+    change: data.changePercent,
+    weekHigh52: data.high52, weekLow52: data.low52,
+    distFrom52High: data.distFrom52h,
+    ema21: data.ema21, ema50: data.ema50, ema200: data.ema200,
+    rsi14: data.rsi, atr14: data.atr,
+    avgVol: data.avgVol, curVol: data.curVol, volRatio: data.volRatio,
+    baseDepth: data.distFrom52h, sector: data.sector,
+    epsGrowth: null, revGrowth: null, nextEarnings: 'N/A',
+    vixPrice: market.vixPrice, spyPrice: market.spyPrice,
+    spyEMA200: market.spyEMA200, spyAbove200: market.spyAbove200,
+    sectorRanked: market.sectorRanked,
+    fetchTime: new Date().toLocaleTimeString(),
+    short_term: data.shortTerm, long_term: data.longTerm,
+    regime: data.regime, momentum: getMomentum(data.rsi),
+    ema_align: data.emaAlign, dataSource: data.source,
+  };
+  updateDataPanel();
+  autoFillRegime();
+  autoFillSetup();
+  autoFillTimeframe();
+  autoFillPosition();
+  autoFillFundamentals();
+  const badge = data.source === 'sample' ? `🟡 SAMPLE ${liveData.fetchTime}` : `🟢 ${liveData.fetchTime}`;
+  document.getElementById('h-last-fetch').textContent = badge;
+  document.getElementById('data-live-badge').style.display = 'inline';
+  const dlb = document.getElementById('dl-banner');
+  if (dlb) dlb.style.display = 'none';
+  calcAll();
+  save();
+}
+
+async function loadSampleData(ticker) {
+  if (!SAMPLE_DATA[ticker]) { showErr(`Sample байхгүй: ${ticker}`); return; }
+  document.getElementById('h-ticker').value = ticker;
+  clearUI(ticker);
+  const d = SAMPLE_DATA[ticker];
+  const stock = { success:true, source:'sample', ticker, price:d.price,
+    changePercent:d.change_pct, rsi:d.rsi14, atr:d.atr14,
+    ema21:d.ema21, ema50:d.ema50, ema200:d.ema200,
+    volRatio:d.vol_ratio, avgVol:d.avg_vol, curVol:d.cur_vol,
+    high52:d.high_52w, low52:d.low_52w, distFrom52h:d.dist_from_52h,
+    prevClose:d.prev_close, sector:d.sector,
+    shortTerm:d.short_term==='bullish'?'BULL':'BEAR',
+    longTerm:d.long_term==='bullish'?'BULL':'BEAR',
+    regime:d.regime, emaAlign:d.ema_align,
+  };
+  const market = { vixPrice:20, spyPrice:500, spyEMA200:480, spyAbove200:true, sectorRanked:[] };
+  renderStockData(stock, market);
+}
+
+// ════════════════════════════════════════════════════════════════
+// MAIN FETCH FLOW
+// ════════════════════════════════════════════════════════════════
 
 async function fetchAllData() {
-  const rawInput = document.getElementById('h-ticker').value;
-  const ticker = normalizeTicker(rawInput);
+  const raw = document.getElementById('h-ticker').value;
+  const ticker = normalizeTicker(raw);
   if (!ticker) { showErr('Ticker оруулна уу'); return; }
 
-  console.log('Fetching ticker:', ticker);
-  clearStockData(ticker);
+  clearUI(ticker);
 
   const overlay = document.getElementById('fetch-overlay');
   const btn = document.getElementById('fetch-btn');
@@ -1050,112 +1209,25 @@ async function fetchAllData() {
   btn.textContent = '⏳ ТАТАЖ БАЙНА...';
 
   try {
-    // Check server
-    setFetchMsg('Серверт холбогдож байна...');
-    const serverOk = await checkServer();
-    if (!serverOk) {
-      // Render free tier may still be waking up — try fetch anyway
-      console.warn('Health check failed, attempting fetch anyway...');
-      setFetchMsg('Сервер сэрж байна, хүлээнэ үү...');
-    }
-
-    // Fetch ticker
-    setFetchMsg(`${ticker} татаж байна...`);
-    const d = await fetchQuote(ticker);
-    console.log('Fetched data:', d);
-    if (d.error) throw new Error(d.error);
-    if (!d.price) throw new Error(`${ticker} — хүчинтэй өгөгдөл ирсэнгүй`);
-
-    // Fetch VIX, SPY, Sector ETFs in parallel
-    setFetchMsg('VIX + SPY + Sector ETF татаж байна...');
-    const [vixData, spyData, xlkData, xlfData, xleData, xlvData, xlyData] = await Promise.allSettled([
-      fetchQuote('%5EVIX'),
-      fetchQuote('SPY'),
-      fetchQuote('XLK'),
-      fetchQuote('XLF'),
-      fetchQuote('XLE'),
-      fetchQuote('XLV'),
-      fetchQuote('XLY'),
+    setFetchMsg(`${ticker} өгөгдөл татаж байна...`);
+    const [stockData, marketData] = await Promise.all([
+      fetchStockData(ticker),
+      fetchMarketData().catch(() => ({
+        vixPrice:20, spyPrice:500, spyEMA200:480,
+        spyAbove200:true, sectorRanked:[]
+      }))
     ]);
 
-    const vixPrice = vixData.status === 'fulfilled' && !vixData.value.error ? vixData.value.price : 20;
-    const spyPrice = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.price : 500;
-    const spyEMA200 = spyData.status === 'fulfilled' && !spyData.value.error ? spyData.value.ema200 : 0;
-    const spyAbove200 = spyPrice > spyEMA200;
-
-    // Sector relative strength vs SPY
-    const getP = (r) => r.status === 'fulfilled' && !r.value.error ? r.value.price : null;
-    const sectorPrices = {
-      XLK: getP(xlkData), XLF: getP(xlfData), XLE: getP(xleData),
-      XLV: getP(xlvData), XLY: getP(xlyData)
-    };
-    const sectorNames = { XLK:'Tech', XLF:'Financial', XLE:'Energy', XLV:'Healthcare', XLY:'Consumer' };
-    const sectorRanked = Object.entries(sectorPrices)
-      .filter(([,p]) => p !== null && spyPrice > 0)
-      .map(([sym, p]) => ({ sym, name: sectorNames[sym], rs: p / spyPrice }))
-      .sort((a, b) => b.rs - a.rs);
-
-    liveData = {
-      ticker,
-      currentPrice: d.price,
-      prevClose: d.prev_close,
-      change: d.change_pct,
-      weekHigh52: d.high_52w,
-      weekLow52: d.low_52w,
-      distFrom52High: d.dist_from_52h,
-      ema21: d.ema21,
-      ema50: d.ema50,
-      ema200: d.ema200,
-      rsi14: d.rsi14,
-      atr14: d.atr14,
-      avgVol: d.avg_vol,
-      curVol: d.cur_vol,
-      volRatio: d.vol_ratio,
-      baseDepth: d.dist_from_52h,
-      sector: d.sector,
-      industry: d.industry,
-      epsGrowth: d.eps_growth,
-      revGrowth: d.rev_growth,
-      nextEarnings: d.next_earnings,
-      vixPrice, spyPrice, spyEMA200, spyAbove200, sectorRanked,
-      fetchTime: new Date().toLocaleTimeString(),
-      short_term: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
-      long_term: d.long_term === 'bullish' ? 'BULL' : 'BEAR',
-      regime: d.regime || 'unknown',
-      momentum: getMomentum(d.rsi14 || 50),
-      ema_align: d.ema_align ?? 0,
-    };
-
-    setFetchMsg('Мэдээллийг боловсруулж байна...');
-    updateDataPanel();
-    autoFillRegime();
-    autoFillSetup();
-    autoFillTimeframe();
-    autoFillPosition();
-    autoFillFundamentals();
-
-    document.getElementById('h-last-fetch').textContent = `🟢 ${liveData.fetchTime}`;
-    document.getElementById('data-live-badge').style.display = 'inline';
-    document.getElementById('dl-banner').style.display = 'none';
-
-    calcAll();
-    save();
+    if (!stockData.success) {
+      renderError(ticker, stockData.error);
+      return;
+    }
+    setFetchMsg('Тооцоолж байна...');
+    renderStockData(stockData, marketData);
 
   } catch (err) {
-    console.error(err);
-    showErr(`Алдаа: ${err.message}`);
-    // Show N/A state for the attempted ticker
-    const panel = document.getElementById('data-panel');
-    const grid = document.getElementById('data-grid');
-    if (panel && grid) {
-      panel.classList.add('visible');
-      grid.innerHTML = `<div style="padding:12px;color:var(--red);font-family:var(--mono);font-size:13px;">
-        ❌ <b>${ticker}</b> — Өгөгдөл олдсонгүй / Fetch амжилтгүй<br>
-        <span style="color:var(--txt3);font-size:11px;">Price: N/A | RSI: N/A | EMA: N/A | ATR: N/A</span>
-      </div>`;
-    }
-    const v = document.getElementById('rverdict');
-    if (v) { v.className='banner b-r vis'; v.textContent=`❌ ${ticker} — Өгөгдөл байхгүй`; }
+    console.error('fetchAllData:', err);
+    renderError(ticker, 'FETCH_FAILED');
   } finally {
     overlay.classList.remove('vis');
     btn.classList.remove('loading');
@@ -1558,47 +1630,64 @@ function calcWatchScore(ticker) {
 // ════════════════════════════════════
 // HELPER FUNCTIONS
 // ════════════════════════════════════
-function calculateMacroScore(vix, spy, ema200, adTrend) {
-  let score = 0;
-  if (vix < 15) score += 3;
-  else if (vix <= 25) score += 2;
-  else if (vix <= 35) score += 1;
-  if (spy > ema200) score += 3;
-  if (adTrend === 'up') score += 2;
-  else if (adTrend === 'flat') score += 1;
-  return score; // max = 8
-}
+// ════════════════════════════════════════════════════════════════
+// LAYER 2: CALCULATION LAYER (pure functions, no DOM touch)
+// ════════════════════════════════════════════════════════════════
 
-function getMarketRegime(score) {
-  if (score >= 7) return '🟢 Strong Bull';
-  if (score >= 5) return '🟡 Neutral Bull';
-  return '🔴 Weak / Risk Off';
+function getTrend(price, ema21, ema50, ema200) {
+  const shortTerm = (price > ema21 && price > ema50) ? 'BULL' : 'BEAR';
+  const longTerm  = (price > ema200) ? 'BULL' : 'BEAR';
+  return { shortTerm, longTerm };
 }
 
 function getMomentum(rsi) {
-  if (rsi >= 65) return "Хүчтэй эрч";
-  if (rsi <= 30) return "Хэт зарагдсан";
-  return "Тэнцвэртэй";
+  if (rsi >= 65) return 'Хүчтэй эрч';
+  if (rsi <= 30) return 'Хэт зарагдсан';
+  return 'Тэнцвэртэй';
 }
 
 function getRegime(shortTerm, longTerm) {
-  if (shortTerm === "BULL" && longTerm === "BULL") return "BULL_TREND";
-  if (shortTerm === "BEAR" && longTerm === "BEAR") return "BEAR_TREND";
-  if (shortTerm === "BULL" && longTerm === "BEAR") return "COUNTER_TREND_RALLY";
-  if (shortTerm === "BEAR" && longTerm === "BULL") return "PULLBACK";
-  return "UNKNOWN";
+  if (shortTerm === 'BULL' && longTerm === 'BULL') return 'BULL_TREND';
+  if (shortTerm === 'BEAR' && longTerm === 'BEAR') return 'BEAR_TREND';
+  if (shortTerm === 'BULL' && longTerm === 'BEAR') return 'COUNTER_TREND_RALLY';
+  if (shortTerm === 'BEAR' && longTerm === 'BULL') return 'PULLBACK';
+  return 'UNKNOWN';
+}
+
+function calculateMacroScore(vix, spy, ema200, adTrend) {
+  let s = 0;
+  if (vix < 15) s += 3; else if (vix <= 25) s += 2; else if (vix <= 35) s += 1;
+  if (spy > ema200) s += 3;
+  if (adTrend === 'up') s += 2; else if (adTrend === 'flat') s += 1;
+  return s; // max 8
+}
+
+function getMarketRegime(macroScore) {
+  if (macroScore >= 7) return '🟢 Strong Bull';
+  if (macroScore >= 5) return '🟡 Neutral Bull';
+  return '🔴 Weak / Risk Off';
 }
 
 function calculateScore(shortTerm, longTerm, momentum, market) {
-  let score = 0;
-  if (shortTerm === "BULL") score += 25;
-  if (longTerm === "BULL") score += 20;
-  if (momentum === "Хүчтэй эрч") score += 15;
-  else if (momentum === "Тэнцвэртэй") score += 8;
-  if (market.spyAbove200) score += 10;
-  if (market.vixNormal) score += 10;
-  if (market.volumeOk) score += 10;
-  return Math.min(70, score);
+  let s = 0;
+  if (shortTerm === 'BULL') s += 25;
+  if (longTerm  === 'BULL') s += 20;
+  if (momentum  === 'Хүчтэй эрч') s += 15;
+  else if (momentum === 'Тэнцвэртэй') s += 8;
+  if (market.spyAbove200) s += 10;
+  if (market.vixNormal)   s += 10;
+  if (market.volumeOk)    s += 10;
+  return Math.min(70, s);
+}
+
+// ════════════════════════════════════════════════════════════════
+// LAYER 3: DECISION LAYER (single source of truth)
+// ════════════════════════════════════════════════════════════════
+
+function getFinalDecision(score, regimeScore) {
+  if (score >= 60 && regimeScore >= 6) return '🟢 BUY / TRADE';
+  if (score >= 40 && regimeScore >= 5) return '🟡 WATCH / SMALL POSITION';
+  return '🔴 CASH / NO TRADE';
 }
 
 // ════════════════════════════════════
@@ -1609,25 +1698,31 @@ function getVal(name) {
   return el ? parseFloat(el.value) : 0;
 }
 
-function getFinalDecision(score, regimeScore) {
-  if (score >= 60 && regimeScore >= 6) return "🟢 BUY / TRADE";
-  if (score >= 40 && regimeScore >= 5) return "🟡 WATCH / SMALL POSITION";
-  return "🔴 CASH / NO TRADE";
-}
-
 function calcRegime() {
-  // Auto-set hidden fields from macroScore if available
-  if (liveData?.macroScore !== undefined) {
-    const ms = liveData.macroScore;
-    // Map macroScore/8 to fed/yc/cyc equivalents
-    document.getElementById('r_fed_h').value = ms >= 6 ? '1' : ms >= 4 ? '0.5' : '0';
-    document.getElementById('r_yc_h').value = ms >= 5 ? '1' : ms >= 3 ? '0.5' : '0';
-    document.getElementById('r_cyc_h').value = ms >= 7 ? '2' : ms >= 5 ? '1.5' : ms >= 3 ? '0.5' : '0';
+  // Compute macroScore directly from liveData
+  const macro = liveData?.vixPrice !== undefined
+    ? calculateMacroScore(liveData.vixPrice, liveData.spyPrice, liveData.spyEMA200, 'up')
+    : 4;
+  liveData.macroScore = macro;
+  // Set hidden fields
+  const setH = (id, v) => { const e=document.getElementById(id); if(e) e.value=String(v); };
+  setH('r_fed_h', macro>=6?'1':macro>=4?'0.5':'0');
+  setH('r_yc_h',  macro>=5?'1':macro>=3?'0.5':'0');
+  setH('r_cyc_h', macro>=7?'2':macro>=5?'1.5':macro>=3?'0.5':'0');
+  // Auto-set idx/vix/ad from liveData
+  if (liveData.spyAbove200 !== undefined) {
+    const getEl = (n,v) => document.querySelector(`input[name="${n}"][value="${v}"]`);
+    if (liveData.spyAbove200) { const e=getEl('r_idx','2'); if(e) e.checked=true; }
+    else { const e=getEl('r_idx','0'); if(e) e.checked=true; }
+    const vix=liveData.vixPrice||20;
+    const vv=vix<15?'2':vix<25?'1':vix<35?'0.5':'0';
+    const ve=getEl('r_vix',vv); if(ve) ve.checked=true;
   }
-  const vals = ['r_idx','r_vix','r_ad','r_pct','r_fed_h','r_yc_h','r_cyc_h','r_sec_h','r_ms_h'].map(n=>{
-    const el = document.getElementById(n) || document.querySelector(`input[name="${n}"]:checked`);
-    return el ? parseFloat(el.value)||0 : 0;
-  });
+  const vals = ['r_idx','r_vix','r_ad','r_pct'].map(n=>{
+    const e=document.querySelector(`input[name="${n}"]:checked`); return e?parseFloat(e.value)||0:0;
+  }).concat(['r_fed_h','r_yc_h','r_cyc_h','r_sec_h','r_ms_h'].map(n=>{
+    const e=document.getElementById(n); return e?parseFloat(e.value)||0:0;
+  }));
   const raw = vals.reduce((a,b)=>a+b,0);
   const score = Math.min(10, Math.round((raw/7)*100)/10);
   document.getElementById('rscore').textContent = score.toFixed(1);
@@ -1893,8 +1988,8 @@ function calcAll() {
   document.getElementById('h-score').textContent=finalScore;
   // Unified final decision using macroScore
   const macroForDecision = liveData?.macroScore ?? 4;
-  const regimeForDecision = (macroForDecision / 8) * 10; // normalize to /10
-  const rs2=parseFloat(document.getElementById('rscore').textContent)||regimeForDecision;
+  const regimeForDecision = parseFloat(((macroForDecision / 8) * 10).toFixed(1));
+  const rs2 = parseFloat(document.getElementById('rscore').textContent) || regimeForDecision;
   const decision = getFinalDecision(finalScore, Math.max(rs2, regimeForDecision));
   const v2 = document.getElementById('rverdict');
   if (decision.startsWith('🟢')) { v2.className='banner b-g vis'; v2.textContent=decision; }
