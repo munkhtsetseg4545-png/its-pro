@@ -1,6 +1,11 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 import requests, time, os, random
+try:
+    import yfinance as yf
+    HAS_YF = True
+except:
+    HAS_YF = False
 
 app = Flask(__name__)
 CORS(app)
@@ -10,58 +15,69 @@ BASE = 'https://finnhub.io/api/v1'
 CACHE = {}
 CACHE_TTL = 300
 
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
-]
-
 def fh(endpoint, params={}):
     params['token'] = FINNHUB_KEY
     r = requests.get(BASE + endpoint, params=params, timeout=15)
     r.raise_for_status()
     return r.json()
 
-def get_yahoo_candles(sym):
-    """Yahoo Finance v8 → v7 fallback"""
-    headers = {
-        'User-Agent': random.choice(USER_AGENTS),
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://finance.yahoo.com/',
-        'Origin': 'https://finance.yahoo.com',
-    }
+def get_candles_yfinance(sym):
+    """yfinance ашиглан candle татах"""
+    ticker = yf.Ticker(sym)
+    hist = ticker.history(period='1y', interval='1d')
+    if hist.empty:
+        return None
+    closes = hist['Close'].tolist()
+    highs  = hist['High'].tolist()
+    lows   = hist['Low'].tolist()
+    vols   = hist['Volume'].tolist()
+    return closes, highs, lows, vols
 
-    # Try v8 first
-    for url, params in [
-        (f'https://query1.finance.yahoo.com/v8/finance/chart/{sym}',
-         {'range': '1y', 'interval': '1d', 'includePrePost': 'false'}),
-        (f'https://query2.finance.yahoo.com/v8/finance/chart/{sym}',
-         {'range': '1y', 'interval': '1d', 'includePrePost': 'false'}),
-        (f'https://query1.finance.yahoo.com/v7/finance/chart/{sym}',
-         {'range': '1y', 'interval': '1d'}),
-    ]:
+def get_candles_yahoo_direct(sym):
+    """Yahoo Finance direct API"""
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/123.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36',
+    ]
+    headers = {
+        'User-Agent': random.choice(user_agents),
+        'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com/',
+    }
+    for base_url in ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com']:
         try:
-            r = requests.get(url, params=params, headers=headers, timeout=15)
+            r = requests.get(
+                f'{base_url}/v8/finance/chart/{sym}',
+                params={'range': '1y', 'interval': '1d', 'includePrePost': 'false'},
+                headers=headers, timeout=15
+            )
             if r.status_code == 200:
                 data = r.json()
                 result = data.get('chart', {}).get('result', [])
                 if result:
-                    res = result[0]
-                    q = res['indicators']['quote'][0]
-                    closes = q.get('close', [])
-                    highs  = q.get('high', [])
-                    lows   = q.get('low', [])
-                    vols   = q.get('volume', [])
-                    zipped = [(c,h,l,v) for c,h,l,v in zip(closes,highs,lows,vols) if c and h and l]
+                    q = result[0]['indicators']['quote'][0]
+                    zipped = [(c,h,l,v) for c,h,l,v in zip(
+                        q.get('close',[]), q.get('high',[]),
+                        q.get('low',[]), q.get('volume',[])
+                    ) if c and h and l]
                     if zipped:
                         return ([x[0] for x in zipped], [x[1] for x in zipped],
                                 [x[2] for x in zipped], [x[3] or 0 for x in zipped])
         except Exception as e:
-            print(f'Yahoo {url} failed: {e}')
-            continue
+            print(f'Yahoo direct {base_url} failed: {e}')
     return None
+
+def get_yahoo_candles(sym):
+    """yfinance эхлээд, дараа direct API"""
+    if HAS_YF:
+        try:
+            result = get_candles_yfinance(sym)
+            if result:
+                return result
+        except Exception as e:
+            print(f'yfinance failed: {e}')
+    return get_candles_yahoo_direct(sym)
 
 def calc_rsi(closes, p=14):
     if len(closes) < p + 1: return 50
@@ -147,17 +163,18 @@ def get_quote(sym):
         'cache_time': time.strftime('%H:%M:%S'),
         'short_term': short_term, 'long_term': long_term,
         'momentum': momentum, 'regime': regime, 'ema_align': ema_align,
+        'data_source': 'yfinance' if HAS_YF else 'yahoo_direct',
     }
     CACHE[sym] = {'data': result, 'ts': time.time()}
     return result
 
 @app.route('/')
 def index():
-    return jsonify({'status': 'ITS Pro API', 'version': '2.1'})
+    return jsonify({'status': 'ITS Pro API', 'version': '2.2', 'yfinance': HAS_YF})
 
 @app.route('/health')
 def health():
-    return jsonify({'status': 'ok', 'cached': list(CACHE.keys())})
+    return jsonify({'status': 'ok', 'cached': list(CACHE.keys()), 'yfinance': HAS_YF})
 
 @app.route('/quote/<ticker>')
 def quote(ticker):
