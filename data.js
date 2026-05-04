@@ -44,6 +44,27 @@ function buildStockResult(d, ticker, source) {
   };
 }
 
+// Inline fallback — works even if config.js loads late
+const FALLBACK_SAMPLE = {
+  AAPL:{price:211.50,change_pct:0.44,rsi14:58.2,atr14:4.21,ema21:208.10,ema50:205.30,ema200:196.40,vol_ratio:1.12,high_52w:237.23,low_52w:164.08,dist_from_52h:10.8,prev_close:210.58,avg_vol:52000000,cur_vol:58000000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  AMZN:{price:212.80,change_pct:1.20,rsi14:64.5,atr14:5.80,ema21:208.50,ema50:201.20,ema200:188.60,vol_ratio:1.35,high_52w:242.52,low_52w:151.61,dist_from_52h:12.2,prev_close:210.28,avg_vol:38000000,cur_vol:51000000,sector:'Consumer Discretionary',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  GOOG:{price:172.40,change_pct:0.85,rsi14:61.3,atr14:4.10,ema21:169.20,ema50:165.80,ema200:158.30,vol_ratio:0.95,high_52w:207.05,low_52w:140.53,dist_from_52h:16.7,prev_close:170.93,avg_vol:22000000,cur_vol:20900000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  META:{price:584.50,change_pct:1.55,rsi14:66.8,atr14:14.20,ema21:570.10,ema50:548.30,ema200:498.20,vol_ratio:1.28,high_52w:638.40,low_52w:390.93,dist_from_52h:8.5,prev_close:575.62,avg_vol:14000000,cur_vol:17920000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  TSLA:{price:284.80,change_pct:-1.20,rsi14:52.1,atr14:12.50,ema21:280.30,ema50:272.10,ema200:248.60,vol_ratio:1.05,high_52w:414.50,low_52w:138.80,dist_from_52h:31.2,prev_close:288.22,avg_vol:82000000,cur_vol:86100000,sector:'Consumer Discretionary',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  NVDA:{price:876.40,change_pct:2.10,rsi14:71.2,atr14:28.50,ema21:848.20,ema50:810.30,ema200:682.10,vol_ratio:1.62,high_52w:974.00,low_52w:462.36,dist_from_52h:10.0,prev_close:858.22,avg_vol:42000000,cur_vol:67920000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  AMD: {price:158.30,change_pct:0.65,rsi14:55.4,atr14:6.20,ema21:155.10,ema50:150.80,ema200:148.20,vol_ratio:0.88,high_52w:227.30,low_52w:122.17,dist_from_52h:30.3,prev_close:157.28,avg_vol:48000000,cur_vol:42240000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  INTC:{price:22.10,change_pct:-0.45,rsi14:38.2,atr14:0.92,ema21:23.40,ema50:25.10,ema200:30.20,vol_ratio:0.72,high_52w:46.45,low_52w:18.51,dist_from_52h:52.4,prev_close:22.20,avg_vol:62000000,cur_vol:44640000,sector:'Technology',short_term:'bearish',long_term:'bearish',regime:'downtrend',ema_align:0},
+  DUOL:{price:348.20,change_pct:1.85,rsi14:68.4,atr14:12.80,ema21:338.50,ema50:318.20,ema200:268.40,vol_ratio:1.42,high_52w:388.90,low_52w:152.57,dist_from_52h:10.5,prev_close:341.84,avg_vol:1800000,cur_vol:2556000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  MSFT:{price:415.20,change_pct:0.72,rsi14:60.1,atr14:8.90,ema21:410.30,ema50:402.10,ema200:378.50,vol_ratio:1.05,high_52w:468.35,low_52w:344.79,dist_from_52h:11.4,prev_close:412.22,avg_vol:21000000,cur_vol:22050000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+  NFLX:{price:985.30,change_pct:1.10,rsi14:63.2,atr14:22.40,ema21:968.10,ema50:940.20,ema200:842.30,vol_ratio:1.18,high_52w:1065.00,low_52w:542.01,dist_from_52h:7.5,prev_close:974.52,avg_vol:4200000,cur_vol:4956000,sector:'Technology',short_term:'bullish',long_term:'bullish',regime:'strong_uptrend',ema_align:3},
+};
+
+function getSampleData(ticker) {
+  // Try config.js SAMPLE_DATA first, then inline fallback
+  if (typeof SAMPLE_DATA !== 'undefined' && SAMPLE_DATA[ticker]) return SAMPLE_DATA[ticker];
+  return FALLBACK_SAMPLE[ticker] || null;
+}
+
 async function fetchStockData(ticker) {
   const marketStatus = getMarketStatus();
   // Try real API first (always — API returns latest available data regardless of hours)
@@ -67,9 +88,10 @@ async function fetchStockData(ticker) {
   } catch (apiErr) {
     console.warn('⚠️ API failed:', apiErr.message, '— market:', marketStatus);
     // Auto-fallback to sample data (Messenger / restricted browser)
-    if (typeof SAMPLE_DATA !== 'undefined' && SAMPLE_DATA[ticker]) {
+    const sampleD = getSampleData(ticker);
+    if (sampleD) {
       console.log('📦 Auto-fallback to sample:', ticker);
-      const d = SAMPLE_DATA[ticker];
+      const d = sampleD;
       return { ...buildStockResult(d, ticker, 'SAMPLE_DATA'), marketStatus };
     }
     return { success: false, ticker, error: 'FETCH_FAILED',
