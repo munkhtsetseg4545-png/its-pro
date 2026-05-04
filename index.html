@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITS Pro — Auto Data</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="fetch-overlay" id="fetch-overlay">
+  <div class="fetch-spinner"></div>
+  <div class="fetch-msg" id="fetch-msg">Өгөгдөл татаж байна...</div>
+</div>
+
+<!-- ERROR TOAST -->
+<div class="err-toast" id="err-toast"></div>
+<div id="test-panel" style="display:none;flex-wrap:wrap;gap:6px;padding:8px 16px;background:rgba(255,214,0,.05);border-bottom:1px solid var(--yellowd);">
+  <span style="font-family:var(--mono);font-size:10px;color:var(--yellow);align-self:center;">SAMPLE DATA:</span>
+  <button onclick="loadSampleData('AAPL')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">AAPL</button> <button onclick="loadSampleData('AMZN')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">AMZN</button> <button onclick="loadSampleData('GOOG')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">GOOG</button> <button onclick="loadSampleData('META')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">META</button> <button onclick="loadSampleData('TSLA')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">TSLA</button> <button onclick="loadSampleData('NVDA')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">NVDA</button> <button onclick="loadSampleData('AMD')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">AMD</button> <button onclick="loadSampleData('INTC')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">INTC</button> <button onclick="loadSampleData('DUOL')" style="font-family:var(--mono);font-size:11px;padding:3px 10px;border:1px solid var(--yellowd);background:transparent;color:var(--yellow);cursor:pointer;border-radius:2px;">DUOL</button>
+</div>
+<div id="server-banner" style="display:none;background:rgba(220,50,50,.1);border-bottom:1px solid var(--red);color:var(--red);font-family:var(--head);font-size:11px;font-weight:600;letter-spacing:1px;padding:8px 16px;text-align:center;position:relative;z-index:1;">⚠️ Сервертэй холбогдох боломжгүй байна. Render.com шалгана уу.</div>
+<div id="dl-banner" style="display:none;background:rgba(200,160,32,.1);border-bottom:1px solid var(--gold);color:var(--gold);font-family:var(--head);font-size:11px;font-weight:600;letter-spacing:1px;padding:8px 16px;text-align:center;position:relative;z-index:1;">
+  ⚠️ Claude.ai дотор AUTO FETCH ажиллахгүй &nbsp;|&nbsp; <span style="color:var(--green);">Файлыг ↓ татаж аваад Chrome/Safari дээр нээнэ үү — тэгвэл бүрэн ажиллана</span>
+  <button onclick="this.parentElement.style.display='none'" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--gold);cursor:pointer;font-size:16px;">✕</button>
+</div>
+
+<!-- ══════ HEADER ══════ -->
+<div class="header">
+  <div class="header-top">
+    <div class="brand">⬡ ITS <span>Pro</span></div>
+    <div class="ticker-wrap">
+      <label>TICKER</label>
+      <input id="h-ticker" type="text" placeholder="NVDA" maxlength="6" onkeydown="if(event.key==='Enter')fetchAllData()">
+    </div>
+    <button class="btn-fetch" id="fetch-btn" onclick="fetchAllData()">⚡ AUTO FETCH</button>
+    <button class="btn-fetch" style="border-color:var(--yellow);color:var(--yellow);font-size:10px;" onclick="document.getElementById('test-panel').style.display=document.getElementById('test-panel').style.display==='none'?'flex':'none'">🧪 TEST</button>
+    <div class="badges">
+      <div class="badge b-score">SCORE: <span id="h-score">0</span>/70</div>
+      <div class="badge b-neutral" id="h-regime">NEUTRAL</div>
+      <div class="badge b-score" id="h-last-fetch">МЭДЭЭЛЭЛ БАЙХГҮЙ</div>
+      <div class="badge b-score">STEP: <span id="h-step">1</span>/8</div>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-lbl">PROGRESS</div>
+    <div class="prog-bg"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-lbl"><span id="h-pct">0</span>%</div>
+  </div>
+</div>
+
+<!-- DATA PANEL -->
+<div class="data-panel" id="data-panel">
+  <div class="data-panel-title">
+    📡 REAL-TIME ӨГӨГДӨЛ
+    <span id="data-live-badge" class="badge b-live" style="display:none;">● LIVE</span>
+  </div>
+  <div class="data-grid" id="data-grid"></div>
+</div>
+
+<!-- ══════ TABS ══════ -->
+<nav class="tabs-nav">
+  <button class="tab-btn active" onclick="switchTab(1,this)"><span class="sn">01</span>REGIME</button>
+  <button class="tab-btn" onclick="switchTab(2,this)"><span class="sn">02</span>WATCHLIST</button>
+  <button class="tab-btn" onclick="switchTab(3,this)"><span class="sn">03</span>SETUP</button>
+  <button class="tab-btn" onclick="switchTab(4,this)"><span class="sn">04</span>TIMEFRAME</button>
+  <button class="tab-btn" onclick="switchTab(5,this)"><span class="sn">05</span>POSITION</button>
+  <button class="tab-btn" onclick="switchTab(6,this)"><span class="sn">06</span>ENTRY</button>
+  <button class="tab-btn" onclick="switchTab(7,this)"><span class="sn">07</span>EXIT</button>
+  <button class="tab-btn" onclick="switchTab(8,this)"><span class="sn">08</span>JOURNAL</button>
+</nav>
+
+<!-- ══════ TAB 1: MARKET REGIME ══════ -->
+<div class="tab-content active" id="tab-1">
+  <div id="bear-banner" class="banner b-r">⚠ BEAR MARKET — Position trading хязгаарлагдана!</div>
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">📊 ИНДЕКС & ЗАХ ЗЭЭЛ <span id="r-auto-tag"></span></div>
+        <div class="rrow">
+          <div class="rlbl">S&P500 / Nasdaq</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_idx" value="2" id="ri1"><label for="ri1">200 EMA дээр ✅✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_idx" value="1" id="ri2"><label for="ri2">50-200 хооронд ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_idx" value="0" id="ri3"><label for="ri3">200 EMA доор ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">VIX <span id="vix-live" style="font-family:var(--mono);font-size:10px;color:var(--green);margin-left:4px;"></span></div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_vix" value="2" id="rv1"><label for="rv1">&lt;15 Тайван ✅</label></div>
+            <div class="ropt"><input type="radio" name="r_vix" value="1" id="rv2"><label for="rv2">15-25 Хэвийн</label></div>
+            <div class="ropt y"><input type="radio" name="r_vix" value="0.5" id="rv3"><label for="rv3">25-35 ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_vix" value="0" id="rv4"><label for="rv4">&gt;35 Аюул ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Advance/Decline</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_ad" value="1" id="ra1"><label for="ra1">Өсч байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_ad" value="0.5" id="ra2"><label for="ra2">Хэвтээ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_ad" value="0" id="ra3"><label for="ra3">Буурч байна ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">200 EMA дээрх %</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_pct" value="2" id="rp1"><label for="rp1">&gt;80% ✅✅</label></div>
+            <div class="ropt y"><input type="radio" name="r_pct" value="1" id="rp2"><label for="rp2">50-80% ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="r_pct" value="0" id="rp3"><label for="rp3">&lt;50% ❌</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🏛 МАКРО ОРЧИН <span class="auto-tag">AUTO</span></div>
+        <div id="macro-auto-result" style="padding:10px 12px;font-size:13px;color:var(--txt2);min-height:40px;">
+          Өгөгдөл татаагүй байна...
+        </div>
+        <div style="padding:4px 12px 10px;font-size:11px;color:var(--txt3);">
+          VIX (0–3) + SPY vs EMA200 (0–3) + A/D (0–2) = max 8
+        </div>
+        <input type="hidden" name="r_fed" id="r_fed_h" value="0.5">
+        <input type="hidden" name="r_yc" id="r_yc_h" value="0.5">
+        <input type="hidden" name="r_cyc" id="r_cyc_h" value="1">
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">🔬 SECTOR & АРИЛЖАА</div>
+        <div class="rrow">
+          <div class="rlbl">Sector жагсаалт <span class="auto-tag">AUTO</span></div>
+        </div>
+        <div id="sector-auto-result" style="padding:4px 12px 10px;font-size:12px;color:var(--txt2);min-height:50px;">
+          Өгөгдөл татаагүй байна...
+        </div>
+        <input type="hidden" name="r_sec" id="r_sec_h" value="0.5">
+        <input type="hidden" name="r_ms" id="r_ms_h" value="1">
+        <div class="div"></div>
+        <div class="rrow">
+          <div class="rlbl">Арилжааны төрөл</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="r_type" value="position" id="rt1"><label for="rt1">Position 3-6 сар ✅</label></div>
+            <div class="ropt"><input type="radio" name="r_type" value="swing" id="rt2"><label for="rt2">Swing 2-8 долоо хоног</label></div>
+            <div class="ropt y"><input type="radio" name="r_type" value="hybrid" id="rt3"><label for="rt3">Hybrid</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">📈 REGIME SCORE</div>
+        <div class="sbox">
+          <div class="snum" id="rscore">0</div>
+          <div class="sdenom">/ 10</div>
+          <div class="slbl">Market Regime Score</div>
+        </div>
+        <div id="rverdict" class="banner b-y vis" style="margin-top:10px;">⚠️ Зах зээл нейтрал — Болгоомжтой</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 2: WATCHLIST ══════ -->
+<div class="tab-content" id="tab-2">
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+    <input class="inp" id="new-ticker" placeholder="Ticker нэмэх (NVDA)" maxlength="6" style="width:200px;text-transform:uppercase;" onkeydown="if(event.key==='Enter')addWatch()">
+    <button class="btn btn-gold" onclick="addWatch()">+ НЭМЭХ</button>
+    <button class="btn btn-green btn-sm" onclick="fetchAllWatchlist()">⚡ БҮГДИЙГ ШИНЭЧЛЭХ</button>
+    <div class="badge b-score">НИЙТ: <span id="wcount">0</span>/10</div>
+  </div>
+  <div id="wlist"></div>
+</div>
+
+<!-- ══════ TAB 3: SETUP ══════ -->
+<div class="tab-content" id="tab-3">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">🏗 BASE ШИНЖИЛГЭЭ <span id="setup-auto-tag"></span></div>
+        <div class="rrow">
+          <div class="rlbl">Base төрөл</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_base" value="2" id="sb1"><label for="sb1">Cup&Handle ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="2" id="sb2"><label for="sb2">VCP ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="1" id="sb3"><label for="sb3">Flat Base ✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="1" id="sb4"><label for="sb4">Double Bottom ✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_base" value="1" id="sb5"><label for="sb5">Ascending ✅</label></div>
+            <div class="ropt r"><input type="radio" name="s_base" value="0" id="sb6"><label for="sb6">Байхгүй ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Base хугацаа</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_dur" value="2" id="sd1"><label for="sd1">10+ долоо хоног ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_dur" value="1" id="sd2"><label for="sd2">5-9 долоо хоног ✅</label></div>
+            <div class="ropt r"><input type="radio" name="s_dur" value="0" id="sd3"><label for="sd3">&lt;5 ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Уналтын гүн <span id="depth-live" style="font-family:var(--mono);font-size:10px;color:var(--green);margin-left:4px;"></span></div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_dep" value="2" id="sdp1"><label for="sdp1">&lt;15% ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_dep" value="1" id="sdp2"><label for="sdp2">15-30% ✅</label></div>
+            <div class="ropt y"><input type="radio" name="s_dep" value="0.5" id="sdp3"><label for="sdp3">30-50% ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="s_dep" value="0" id="sdp4"><label for="sdp4">50%+ ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Долоо хоногийн зай</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_tight" value="2" id="st1"><label for="st1">1-3% ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_tight" value="1" id="st2"><label for="st2">3-5% ✅</label></div>
+            <div class="ropt y"><input type="radio" name="s_tight" value="0.5" id="st3"><label for="st3">5-8% ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="s_tight" value="0" id="st4"><label for="st4">8%+ ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Volume pattern</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_vol" value="2" id="sv1"><label for="sv1">Буурч байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_vol" value="1" id="sv2"><label for="sv2">Хэвийн ✅</label></div>
+            <div class="ropt r"><input type="radio" name="s_vol" value="0" id="sv3"><label for="sv3">Өндөр ❌</label></div>
+          </div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Pocket Pivot</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_pp" value="2" id="spp1"><label for="spp1">Байна ✅✅</label></div>
+            <div class="ropt"><input type="radio" name="s_pp" value="0" id="spp2"><label for="spp2">Байхгүй</label></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">🎯 ENTRY ZONE <span id="pivot-auto-tag"></span></div>
+        <div class="irow">
+          <div class="ilbl">Pivot Point үнэ</div>
+          <input class="inp" type="number" id="pivot-price" placeholder="0.00" style="width:130px;">
+        </div>
+        <div class="irow">
+          <div class="ilbl">Одоогийн үнэ</div>
+          <div class="ival" id="cur-price-setup">—</div>
+        </div>
+        <div class="irow">
+          <div class="ilbl">Pivot-оос зай</div>
+          <div class="ival" id="pivot-dist-val">—</div>
+        </div>
+        <div class="rrow">
+          <div class="rlbl">Pivot-оос зай</div>
+          <div class="ropts">
+            <div class="ropt g"><input type="radio" name="s_dist" value="2" id="sdi1"><label for="sdi1">0-3% ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="s_dist" value="1" id="sdi2"><label for="sdi2">3-5% ✅</label></div>
+            <div class="ropt y"><input type="radio" name="s_dist" value="0.5" id="sdi3"><label for="sdi3">5%+ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="s_dist" value="0" id="sdi4"><label for="sdi4">Хожимдсон ❌</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🔗 CONFLUENCE</div>
+        <div class="confluencegrid">
+          <div class="crow"><input type="checkbox" id="cf1"><label for="cf1">Fib 38/50/61.8% давхцал</label></div>
+          <div class="crow"><input type="checkbox" id="cf2"><label for="cf2">EMA 21/50 давхцал</label></div>
+          <div class="crow"><input type="checkbox" id="cf3"><label for="cf3">S/R түвшин давхцал</label></div>
+          <div class="crow"><input type="checkbox" id="cf4"><label for="cf4">Sector хамт өсч байна</label></div>
+          <div class="crow"><input type="checkbox" id="cf5"><label for="cf5">Индекстэй нийцэж байна</label></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⭐ SETUP SCORE</div>
+        <div class="sbox"><div class="snum" id="setup-snum">0</div><div class="sdenom">/ 5</div><div class="slbl">Confluence</div></div>
+        <div id="setup-result" class="sresult">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 4: TIMEFRAME ══════ -->
+<div class="tab-content" id="tab-4">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">📅 MONTHLY & WEEKLY <span id="tf-auto-tag"></span></div>
+        <div class="tfs">
+          <div class="tft">▸ MONTHLY</div>
+          <div class="rrow"><div class="rlbl">Trend</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_mt" value="2" id="tm1"><label for="tm1">HH & HL ✅✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_mt" value="1" id="tm2"><label for="tm2">Sideways ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_mt" value="0" id="tm3"><label for="tm3">Lower highs ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">200MA</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_m2" value="1" id="tm4"><label for="tm4">Дээр ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_m2" value="0" id="tm5"><label for="tm5">Доор ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">S/R</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_ms" value="1" id="tm6"><label for="tm6">Дэмжлэг ойрхон ✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_ms" value="0.5" id="tm7"><label for="tm7">Алс ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_ms" value="0" id="tm8"><label for="tm8">Эсэргүүцэл дээр ❌</label></div>
+          </div></div>
+        </div>
+        <div class="tfs">
+          <div class="tft">▸ WEEKLY</div>
+          <div class="rrow"><div class="rlbl">10-week MA</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_w1" value="2" id="tw1"><label for="tw1">Дээр+өсч байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_w1" value="1" id="tw2"><label for="tw2">Дээр+хэвтээ ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_w1" value="0" id="tw3"><label for="tw3">Доор ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">Volume</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_wv" value="2" id="tw4"><label for="tw4">Өсөхдөө их ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_wv" value="1" id="tw5"><label for="tw5">Ойролцоо ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_wv" value="0" id="tw6"><label for="tw6">Буурахдаа их ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">RS шугам</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_wr" value="2" id="tw7"><label for="tw7">Шинэ өндөрт ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_wr" value="1" id="tw8"><label for="tw8">Өсч байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_wr" value="0.5" id="tw9"><label for="tw9">Хэвтээ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_wr" value="0" id="tw10"><label for="tw10">Буурч байна ❌</label></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">⏱ DAILY & 4H</div>
+        <div class="tfs">
+          <div class="tft">▸ DAILY</div>
+          <div class="rrow"><div class="rlbl">EMA 21</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_d2" value="2" id="td1"><label for="td1">Дээр+өсч байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_d2" value="1" id="td2"><label for="td2">Дөнгөж давсан ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_d2" value="0" id="td3"><label for="td3">Доор ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">EMA alignment</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_de" value="2" id="td4"><label for="td4">21&gt;50 ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_de" value="1" id="td5"><label for="td5">Crossover ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_de" value="0" id="td6"><label for="td6">21&lt;50 ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">Volume dry-up</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_dv" value="2" id="td7"><label for="td7">Байна ✅✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_dv" value="1" id="td8"><label for="td8">Хэвийн ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_dv" value="0" id="td9"><label for="td9">Өндөр ❌</label></div>
+          </div></div>
+        </div>
+        <div class="tfs">
+          <div class="tft">▸ 4H</div>
+          <div class="rrow"><div class="rlbl">Trend</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_4t" value="2" id="t4h1"><label for="t4h1">Daily-тэй нийцсэн ✅✅</label></div>
+            <div class="ropt"><input type="radio" name="tf_4t" value="1" id="t4h2"><label for="t4h2">Neutral ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_4t" value="0" id="t4h3"><label for="t4h3">Зөрчилдсөн ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">RSI <span id="rsi-live" style="font-family:var(--mono);font-size:10px;color:var(--green);margin-left:4px;"></span></div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_4r" value="2" id="t4h4"><label for="t4h4">50+ өсч байна ✅</label></div>
+            <div class="ropt y"><input type="radio" name="tf_4r" value="0.5" id="t4h5"><label for="t4h5">70+ ⚠️</label></div>
+            <div class="ropt r"><input type="radio" name="tf_4r" value="0" id="t4h6"><label for="t4h6">50- ❌</label></div>
+          </div></div>
+          <div class="rrow"><div class="rlbl">Trigger</div><div class="ropts">
+            <div class="ropt g"><input type="radio" name="tf_4tr" value="2" id="t4h7"><label for="t4h7">Breakout ✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_4tr" value="2" id="t4h8"><label for="t4h8">Pullback ✅</label></div>
+            <div class="ropt g"><input type="radio" name="tf_4tr" value="2" id="t4h9"><label for="t4h9">Episodic ✅</label></div>
+            <div class="ropt r"><input type="radio" name="tf_4tr" value="0" id="t4h10"><label for="t4h10">Байхгүй ❌</label></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⚖️ TF ALIGNMENT</div>
+        <div class="sbox"><div class="snum" id="tf-snum">0</div><div class="sdenom">/ 20</div><div class="slbl">Timeframe Score</div></div>
+        <div class="cgrid" style="margin-top:10px;">
+          <div class="citem"><div class="clbl">Trade Type</div><div class="cval" id="tf-type" style="font-size:13px;">—</div></div>
+          <div class="citem"><div class="clbl">Alignment</div><div class="cval" id="tf-align" style="font-size:13px;">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 5: POSITION ══════ -->
+<div class="tab-content" id="tab-5">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">💰 INPUT ПАРАМЕТРҮҮД <span id="pos-auto-tag"></span></div>
+        <div class="irow"><div class="ilbl">NAV (Portfolio $)</div><input class="inp" type="number" id="ps-nav" placeholder="100000" oninput="calcPos()" style="width:140px;"></div>
+        <div class="irow"><div class="ilbl">Risk % (default 1.5%)</div><input class="inp" type="number" id="ps-risk" value="1.5" step="0.1" oninput="calcPos()" style="width:100px;"></div>
+        <div class="irow">
+          <div class="ilbl">Entry Price <span id="ep-auto" class="auto-tag" style="display:none;">AUTO</span></div>
+          <input class="inp" type="number" id="ps-entry" placeholder="0.00" oninput="calcPos()" style="width:130px;">
+        </div>
+        <div class="irow"><div class="ilbl">Stop Loss Price</div><input class="inp" type="number" id="ps-sl" placeholder="0.00" oninput="calcPos()" style="width:130px;"></div>
+        <div class="irow">
+          <div class="ilbl">ATR Value <span id="atr-auto" class="auto-tag" style="display:none;">AUTO</span></div>
+          <input class="inp" type="number" id="ps-atr" placeholder="0.00" oninput="calcPos()" style="width:130px;">
+        </div>
+        <div class="irow"><div class="ilbl">Trade Type</div>
+          <select class="inp" id="ps-type" onchange="calcPos()" style="width:160px;">
+            <option value="position">Position</option>
+            <option value="swing">Swing</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">⚙️ CONVICTION</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">Setup Score</div><div class="cval" id="conv-s">0/5</div></div>
+          <div class="citem"><div class="clbl">TF Score</div><div class="cval" id="conv-tf">0/20</div></div>
+          <div class="citem"><div class="clbl">Regime Score</div><div class="cval" id="conv-r">0/10</div></div>
+          <div class="citem"><div class="clbl">Multiplier</div><div class="cval" id="conv-m" style="color:var(--gold);">1.0x</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🗂 PORTFOLIO</div>
+        <div class="rrow"><div class="rlbl">Нээлттэй позиц</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pf_o" value="ok" id="pf1"><label for="pf1">&lt;8 ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pf_o" value="warn" id="pf2"><label for="pf2">8-10 ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pf_o" value="stop" id="pf3"><label for="pf3">&gt;10 ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Cash %</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pf_c" value="ok" id="pc1"><label for="pc1">&gt;20% ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pf_c" value="warn" id="pc2"><label for="pc2">10-20% ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pf_c" value="stop" id="pc3"><label for="pc3">&lt;10% ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Сарын P&L</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pf_p" value="ok" id="pp1"><label for="pp1">Эерэг ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pf_p" value="warn" id="pp2"><label for="pp2">Тэнцвэртэй ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pf_p" value="stop" id="pp3"><label for="pp3">&gt;-5% ❌</label></div>
+        </div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">📐 ТООЦООЛОЛ</div>
+        <div id="pw-nav" class="banner b-r">⚠ NAV-ийн 10%+ — Хэт том позиц!</div>
+        <div id="pw-risk" class="banner b-r">⚠ Risk 2%+ — Дүрмийн эсрэг!</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">Max Risk $</div><div class="cval" id="r-mr">$0</div></div>
+          <div class="citem"><div class="clbl">SL Distance</div><div class="cval" id="r-sl">0%</div></div>
+          <div class="citem"><div class="clbl">Total Shares</div><div class="cval" id="r-sh">0</div></div>
+          <div class="citem"><div class="clbl">Position Value</div><div class="cval" id="r-pv">$0</div></div>
+          <div class="citem"><div class="clbl">% of NAV</div><div class="cval" id="r-np">0%</div></div>
+          <div class="citem"><div class="clbl">ATR SL (2x)</div><div class="cval" id="r-at">$0</div></div>
+        </div>
+        <div class="div"></div>
+        <div class="mlbl">R/R RATIOS</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">TP1</div><div class="cval" id="rr1" style="color:var(--yellow);">—</div></div>
+          <div class="citem"><div class="clbl">TP2</div><div class="cval" id="rr2" style="color:var(--yellow);">—</div></div>
+          <div class="citem"><div class="clbl">TP3</div><div class="cval" id="rr3" style="color:var(--yellow);">—</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">📊 TRANCHE</div>
+        <table class="ttbl">
+          <thead><tr><th>Tranche</th><th>%</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td class="t1c">T1</td><td>40%</td><td class="t1c" id="tr-t1">0</td>
+              <td><input type="number" id="tr-t1p" placeholder="0.00" oninput="calcTranches()"></td>
+              <td id="tr-t1v" style="color:var(--gold);">$0</td></tr>
+            <tr><td class="t2c">T2</td><td>30%</td><td class="t2c" id="tr-t2">0</td>
+              <td><input type="number" id="tr-t2p" placeholder="0.00" oninput="calcTranches()"></td>
+              <td id="tr-t2v" style="color:var(--blue);">$0</td></tr>
+            <tr><td>T3</td><td>30%</td><td id="tr-t3">0</td>
+              <td><input type="number" id="tr-t3p" placeholder="0.00" oninput="calcTranches()"></td>
+              <td id="tr-t3v">$0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 6: ENTRY ══════ -->
+<div class="tab-content" id="tab-6">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">🎯 ENTRY ТӨРӨЛ</div>
+        <div class="rrow"><div class="rlbl">Entry type</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="e_t" value="breakout" id="et1"><label for="et1">Breakout</label></div>
+          <div class="ropt g"><input type="radio" name="e_t" value="pullback" id="et2"><label for="et2">Pullback</label></div>
+          <div class="ropt g"><input type="radio" name="e_t" value="episodic" id="et3"><label for="et3">Episodic</label></div>
+        </div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">✅ PRE-ENTRY</div>
+        <div class="rrow"><div class="rlbl">S&P Futures</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_s" value="ok" id="pre1"><label for="pre1">Эерэг ✅</label></div>
+          <div class="ropt r"><input type="radio" name="pre_s" value="bad" id="pre2"><label for="pre2">Буурч байна ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Macro News</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_n" value="ok" id="prn1"><label for="prn1">Байхгүй ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pre_n" value="warn" id="prn2"><label for="prn2">Хүлээгдэж байна ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pre_n" value="bad" id="prn3"><label for="prn3">Сөрөг ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Pre-Market</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_p" value="ok" id="prp1"><label for="prp1">Дээш ✅</label></div>
+          <div class="ropt r"><input type="radio" name="pre_p" value="bad" id="prp2"><label for="prp2">Доош ❌</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Volume</div><div class="ropts">
+          <div class="ropt g"><input type="radio" name="pre_v" value="ok" id="prv1"><label for="prv1">Дундажаас өндөр ✅</label></div>
+          <div class="ropt y"><input type="radio" name="pre_v" value="warn" id="prv2"><label for="prv2">Хэвийн ⚠️</label></div>
+          <div class="ropt r"><input type="radio" name="pre_v" value="bad" id="prv3"><label for="prv3">Хэт бага ❌</label></div>
+        </div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">📋 ORDER EXECUTION</div>
+        <table class="ttbl">
+          <thead><tr><th>Tranche</th><th>Shares</th><th>Entry $</th><th>Type</th><th>Filled</th></tr></thead>
+          <tbody>
+            <tr><td class="t1c">T1</td><td class="t1c" id="et1s">0</td>
+              <td><input type="number" id="et1p" placeholder="0.00"></td>
+              <td><select class="inp" style="width:80px;padding:2px 6px;"><option>Market</option><option>Limit</option><option>Stop</option></select></td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td class="t2c">T2</td><td class="t2c" id="et2s">0</td>
+              <td><input type="number" id="et2p" placeholder="0.00"></td>
+              <td><select class="inp" style="width:80px;padding:2px 6px;"><option>Limit</option><option>Market</option></select></td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td>T3</td><td id="et3s">0</td>
+              <td><input type="number" id="et3p" placeholder="0.00"></td>
+              <td><select class="inp" style="width:80px;padding:2px 6px;"><option>Limit</option><option>Market</option></select></td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-hd">🛑 STOP LOSS</div>
+        <div class="rrow"><div class="rlbl">SL арга</div><div class="ropts">
+          <div class="ropt"><input type="radio" name="slm" value="fixed" id="slm1"><label for="slm1">Тогтмол %</label></div>
+          <div class="ropt"><input type="radio" name="slm" value="atr" id="slm2"><label for="slm2">ATR x2</label></div>
+          <div class="ropt"><input type="radio" name="slm" value="swing" id="slm3"><label for="slm3">Swing Low</label></div>
+        </div></div>
+        <div class="irow">
+          <div class="ilbl">SL Price</div>
+          <input class="inp" type="number" id="sl-p" placeholder="0.00" oninput="calcSLDist()" style="width:120px;">
+          <div class="ival" id="sl-dist">0.00%</div>
+        </div>
+        <div class="rrow"><div class="rlbl">SL дүрэм</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="slr" value="strict" id="slr1"><label for="slr1">Хатуу — Тэр даруй гар</label></div>
+          <div class="ropt y"><input type="radio" name="slr" value="eod" id="slr2"><label for="slr2">EOD хаалтад шалга</label></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 7: EXIT ══════ -->
+<div class="tab-content" id="tab-7">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">💹 EXIT PLAN</div>
+        <div id="tp1-remind" class="banner b-y">💡 TP1 хийсний дараа SL → Breakeven!</div>
+        <table class="ttbl">
+          <thead><tr><th>Target</th><th>%</th><th>Price</th><th>R:R</th><th>Filled</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--yellow)">TP1</td><td>30%</td>
+              <td><input type="number" id="tp1p" placeholder="0.00" oninput="calcTP()"></td>
+              <td id="tp1rr" style="color:var(--yellow);">—</td>
+              <td><input type="checkbox" id="tp1fill" onchange="showTP1Remind()" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td style="color:var(--green)">TP2</td><td>30%</td>
+              <td><input type="number" id="tp2p" placeholder="0.00" oninput="calcTP()"></td>
+              <td id="tp2rr" style="color:var(--green);">—</td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+            <tr><td style="color:var(--gold)">TP3</td><td>40%</td>
+              <td><input type="number" id="tp3p" placeholder="Trailing" oninput="calcTP()"></td>
+              <td id="tp3rr" style="color:var(--gold);">—</td>
+              <td><input type="checkbox" style="accent-color:var(--green);width:14px;height:14px;"></td></tr>
+          </tbody>
+        </table>
+        <div class="div"></div>
+        <div class="mlbl">TRAILING STOP</div>
+        <div class="rrow"><div class="rlbl">Trailing арга</div><div class="ropts">
+          <div class="ropt"><input type="radio" name="trm" value="ema21" id="tr1"><label for="tr1">EMA 21</label></div>
+          <div class="ropt"><input type="radio" name="trm" value="atr2" id="tr2"><label for="tr2">ATR x2</label></div>
+          <div class="ropt"><input type="radio" name="trm" value="swing" id="tr3"><label for="tr3">Swing Low</label></div>
+        </div></div>
+        <div class="irow"><div class="ilbl">Trailing SL</div><input class="inp" type="number" id="trail-sl" placeholder="0.00" style="width:120px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">💰 P&L</div>
+        <div class="cgrid">
+          <div class="citem"><div class="clbl">Realized P&L</div><div class="cval" id="ex-pnl">$0</div></div>
+          <div class="citem"><div class="clbl">Return %</div><div class="cval" id="ex-ret">0%</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">🌪 PARABOLIC SIGNALS</div>
+        <div class="mlbl" style="margin-bottom:8px;">7 ХОНОГ ТУТАМ ШАЛГА</div>
+        <div class="rrow"><div class="rlbl">Speed Signal</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="par_s" value="1" id="ps1" onchange="calcPara()"><label for="ps1">7 хоногт 10%+ ⚠️</label></div>
+          <div class="ropt g"><input type="radio" name="par_s" value="0" id="ps2" onchange="calcPara()"><label for="ps2">Хэвийн ✅</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Volume Signal</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="par_v" value="1" id="pv1" onchange="calcPara()"><label for="pv1">Туйлын өндөр ⚠️</label></div>
+          <div class="ropt g"><input type="radio" name="par_v" value="0" id="pv2" onchange="calcPara()"><label for="pv2">Хэвийн ✅</label></div>
+        </div></div>
+        <div class="rrow"><div class="rlbl">Position Signal</div><div class="ropts">
+          <div class="ropt r"><input type="radio" name="par_p" value="1" id="pp_1" onchange="calcPara()"><label for="pp_1">100%+ дээш ⚠️</label></div>
+          <div class="ropt g"><input type="radio" name="par_p" value="0" id="pp_2" onchange="calcPara()"><label for="pp_2">Хэвийн ✅</label></div>
+        </div></div>
+        <div id="para-res" class="parascore">Дохио байхгүй</div>
+      </div>
+      <div class="card">
+        <div class="card-hd">🆘 DEFENSIVE EXIT</div>
+        <div class="crow"><input type="checkbox" id="def1" onchange="checkDef()"><label for="def1" style="color:var(--red);">⛔ Stop Loss эвдэгдсэн</label></div>
+        <div class="crow"><input type="checkbox" id="def2" onchange="checkDef()"><label for="def2" style="color:var(--red);">⛔ Earnings Miss</label></div>
+        <div class="crow"><input type="checkbox" id="def3" onchange="checkDef()"><label for="def3" style="color:var(--red);">⛔ CEO огцорсон</label></div>
+        <div class="crow"><input type="checkbox" id="def4" onchange="checkDef()"><label for="def4" style="color:var(--red);">⛔ Fraud</label></div>
+        <div class="crow"><input type="checkbox" id="def5" onchange="checkDef()"><label for="def5" style="color:var(--red);">⛔ Sector асуудал</label></div>
+        <div id="def-warn" class="banner b-r" style="margin-top:8px;">🚨 ЯАРАЛТАЙ ГАР!</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ TAB 8: JOURNAL ══════ -->
+<div class="tab-content" id="tab-8">
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-hd">📝 TRADE SUMMARY</div>
+        <div class="irow"><div class="ilbl">Entry avg price</div><input class="inp" type="number" id="j-en" placeholder="0.00" oninput="calcJ()" style="width:120px;"></div>
+        <div class="irow"><div class="ilbl">Exit avg price</div><input class="inp" type="number" id="j-ex" placeholder="0.00" oninput="calcJ()" style="width:120px;"></div>
+        <div class="irow"><div class="ilbl">Total Shares</div><input class="inp" type="number" id="j-sh" placeholder="0" oninput="calcJ()" style="width:120px;"></div>
+        <div class="irow"><div class="ilbl">Days Held</div><input class="inp" type="number" id="j-dy" placeholder="0" style="width:100px;"></div>
+        <div class="irow"><div class="ilbl">Max Drawdown %</div><input class="inp" type="number" id="j-dd" placeholder="0.00" style="width:100px;"></div>
+        <div class="cgrid" style="margin-top:10px;">
+          <div class="citem"><div class="clbl">Realized P&L</div><div class="cval" id="j-pnl">$0</div></div>
+          <div class="citem"><div class="clbl">Return %</div><div class="cval" id="j-ret">0%</div></div>
+        </div>
+        <div class="div"></div>
+        <div class="mlbl">СЭТГЭЛИЙН БАЙДАЛ</div>
+        <div class="emotrow" style="margin-top:6px;">
+          <button class="ebtn" onclick="setEmo('calm',this,'ac')">😌 Calm</button>
+          <button class="ebtn" onclick="setEmo('confident',this,'af')">💪 Confident</button>
+          <button class="ebtn" onclick="setEmo('fomo',this,'fo')">😰 FOMO</button>
+          <button class="ebtn" onclick="setEmo('fearful',this,'fe')">😨 Fearful</button>
+          <button class="ebtn" onclick="setEmo('excited',this,'ex')">🚀 Excited</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">💭 ТЭМДЭГЛЭЛ</div>
+        <div class="mlbl">Trade Thesis</div>
+        <textarea class="inp" id="j-th" placeholder="Энэ trade хийх үндэслэл..." style="margin-bottom:10px;"></textarea>
+        <div class="mlbl">Invalidation</div>
+        <textarea class="inp" id="j-in" placeholder="Trade алдах нөхцөл..." style="margin-bottom:10px;"></textarea>
+        <div class="mlbl">Сургамж</div>
+        <textarea class="inp" id="j-le" placeholder="Энэ trade-аас юу сурав..." style="margin-bottom:10px;"></textarea>
+        <div class="mlbl">Дараагийн trade-д өөрчлөх</div>
+        <textarea class="inp" id="j-nx" placeholder="Сайжруулах зүйл..."></textarea>
+      </div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn btn-gold" onclick="saveJournal()">💾 ЖУРНАЛ ХАДГАЛАХ</button>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-hd">📊 СТАТИСТИК</div>
+        <div class="sgrid">
+          <div class="sbox2"><div class="sval" id="st-t">0</div><div class="slbl2">Нийт Trade</div></div>
+          <div class="sbox2"><div class="sval" id="st-w">0%</div><div class="slbl2">Win Rate</div></div>
+          <div class="sbox2"><div class="sval" id="st-r">0</div><div class="slbl2">Avg R:R</div></div>
+          <div class="sbox2"><div class="sval" id="st-p">$0</div><div class="slbl2">Total P&L</div></div>
+          <div class="sbox2"><div class="sval" id="st-b" style="color:var(--green);">$0</div><div class="slbl2">Best</div></div>
+          <div class="sbox2"><div class="sval" id="st-wo" style="color:var(--red);">$0</div><div class="slbl2">Worst</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">📜 HISTORY</div>
+        <div id="j-hist"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIONS -->
+<div class="actbar">
+  <button class="btn btn-gold btn-sm" onclick="fetchAllData()">⚡ ШИНЭЧЛЭХ</button>
+  <button class="btn btn-gold btn-sm" onclick="window.print()">🖨 PRINT</button>
+  <button class="btn btn-green btn-sm" onclick="save()">💾 ХАДГАЛАХ</button>
+  <button class="btn btn-red btn-sm" onclick="newTrade()">🔄 ШИНЭ TRADE</button>
+</div>
+
+<script src="config.js"></script>
+<script src="data.js"></script>
+<script src="calc.js"></script>
+<script src="ui.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
