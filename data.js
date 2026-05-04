@@ -66,8 +66,12 @@ async function fetchStockData(ticker) {
 
   } catch (apiErr) {
     console.warn('⚠️ API failed:', apiErr.message, '— market:', marketStatus);
-    // Do NOT auto-fallback to sample — return FETCH_FAILED
-    // (sample is only loaded manually via TEST button)
+    // Auto-fallback to sample data (Messenger / restricted browser)
+    if (typeof SAMPLE_DATA !== 'undefined' && SAMPLE_DATA[ticker]) {
+      console.log('📦 Auto-fallback to sample:', ticker);
+      const d = SAMPLE_DATA[ticker];
+      return { ...buildStockResult(d, ticker, 'SAMPLE_DATA'), marketStatus };
+    }
     return { success: false, ticker, error: 'FETCH_FAILED',
       message: apiErr.message, marketStatus };
   }
