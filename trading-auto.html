@@ -963,8 +963,40 @@ function normalizeTicker(input) {
   return map[t] || t;
 }
 
+// Returns: 'open' | 'closed' | 'pre' | 'after'
+function getMarketStatus() {
+  const now = new Date();
+  // Convert to US Eastern Time
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = et.getDay(); // 0=Sun, 6=Sat
+  const h = et.getHours();
+  const m = et.getMinutes();
+  const mins = h * 60 + m;
+  if (day === 0 || day === 6) return 'closed';
+  if (mins >= 570 && mins < 960) return 'open';    // 9:30–16:00
+  if (mins >= 240 && mins < 570) return 'pre';     // 4:00–9:30
+  if (mins >= 960 && mins < 1200) return 'after';  // 16:00–20:00
+  return 'closed';
+}
+
+function buildStockResult(d, ticker, source) {
+  return {
+    success: true, source, raw: d, ticker,
+    price: d.price, changePercent: d.change_pct,
+    rsi: d.rsi14, atr: d.atr14,
+    ema21: d.ema21, ema50: d.ema50, ema200: d.ema200,
+    volRatio: d.vol_ratio, avgVol: d.avg_vol, curVol: d.cur_vol,
+    high52: d.high_52w, low52: d.low_52w, distFrom52h: d.dist_from_52h,
+    prevClose: d.prev_close, sector: d.sector,
+    shortTerm: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
+    longTerm:  d.long_term  === 'bullish' ? 'BULL' : 'BEAR',
+    regime: d.regime || 'unknown', emaAlign: d.ema_align ?? 0,
+  };
+}
+
 async function fetchStockData(ticker) {
-  // Try real API first
+  const marketStatus = getMarketStatus();
+  // Try real API first (always — API returns latest available data regardless of hours)
   try {
     const res = await fetch(`${API_BASE}/quote/${ticker}`, {
       signal: AbortSignal.timeout(20000)
@@ -974,37 +1006,20 @@ async function fetchStockData(ticker) {
     if (d.error) throw new Error(d.error);
     if (!d.price || d.price === 0) throw new Error('price missing');
 
-    console.log('✅ Real API data:', ticker, d.price);
-    return { success: true, source: 'api', raw: d,
-      ticker, price: d.price, changePercent: d.change_pct,
-      rsi: d.rsi14, atr: d.atr14,
-      ema21: d.ema21, ema50: d.ema50, ema200: d.ema200,
-      volRatio: d.vol_ratio, avgVol: d.avg_vol, curVol: d.cur_vol,
-      high52: d.high_52w, low52: d.low_52w, distFrom52h: d.dist_from_52h,
-      prevClose: d.prev_close, sector: d.sector,
-      shortTerm: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
-      longTerm:  d.long_term  === 'bullish' ? 'BULL' : 'BEAR',
-      regime: d.regime || 'unknown', emaAlign: d.ema_align ?? 0,
-    };
+    // Determine source label based on market status
+    const source = marketStatus === 'open' ? 'LIVE_REALTIME'
+      : (marketStatus === 'pre' || marketStatus === 'after') ? 'LIVE_REALTIME'
+      : 'MARKET_CLOSED_LAST_DATA';
+
+    console.log(`✅ API data [${source}]:`, ticker, d.price);
+    return { ...buildStockResult(d, ticker, source), marketStatus };
+
   } catch (apiErr) {
-    console.warn('⚠️ API failed:', apiErr.message, '— trying sample data');
-    // Fallback to sample data
-    if (SAMPLE_DATA[ticker]) {
-      const d = SAMPLE_DATA[ticker];
-      console.log('📦 Using sample data for:', ticker);
-      return { success: true, source: 'sample', raw: d,
-        ticker, price: d.price, changePercent: d.change_pct,
-        rsi: d.rsi14, atr: d.atr14,
-        ema21: d.ema21, ema50: d.ema50, ema200: d.ema200,
-        volRatio: d.vol_ratio, avgVol: d.avg_vol, curVol: d.cur_vol,
-        high52: d.high_52w, low52: d.low_52w, distFrom52h: d.dist_from_52h,
-        prevClose: d.prev_close, sector: d.sector,
-        shortTerm: d.short_term === 'bullish' ? 'BULL' : 'BEAR',
-        longTerm:  d.long_term  === 'bullish' ? 'BULL' : 'BEAR',
-        regime: d.regime || 'unknown', emaAlign: d.ema_align ?? 0,
-      };
-    }
-    return { success: false, ticker, error: 'FETCH_FAILED', message: apiErr.message };
+    console.warn('⚠️ API failed:', apiErr.message, '— market:', marketStatus);
+    // Do NOT auto-fallback to sample — return FETCH_FAILED
+    // (sample is only loaded manually via TEST button)
+    return { success: false, ticker, error: 'FETCH_FAILED',
+      message: apiErr.message, marketStatus };
   }
 }
 
@@ -1117,24 +1132,27 @@ function clearUI(ticker) {
   if (rs) rs.textContent = '0.0';
 }
 
-function renderError(ticker, error) {
+function renderError(ticker, error, marketStatus) {
   const panel = document.getElementById('data-panel');
   const grid  = document.getElementById('data-grid');
+  const mkt = marketStatus || getMarketStatus();
+  const mktLabel = { open:'Зах зээл нээлттэй', pre:'Pre-market', after:'After-hours', closed:'Зах зээл хаалттай' }[mkt] || '';
   if (panel && grid) {
     panel.classList.add('visible');
     grid.innerHTML = `<div style="padding:12px;color:var(--red);font-family:var(--mono);font-size:13px;">
-      ❌ <b>${ticker}</b> — Өгөгдөл олдсонгүй<br>
-      <span style="color:var(--txt3);font-size:11px;">
-        Энэ browser дэмждэггүй байж магадгүй. Safari/Chrome дээр нээнэ үү.
+      ❌ <b>${ticker}</b> — Өгөгдөл авч чадсангүй<br>
+      <span style="color:var(--txt2);font-size:11px;">
+        ${mktLabel} · Сервер хариу өгөхгүй байна.<br>
+        Safari/Chrome дээр нээгээд дахин оролдоно уу.
       </span><br>
       <span style="color:var(--txt2);font-size:11px;margin-top:6px;display:block;">
-        💡 TEST товч ашиглана уу: <b>AAPL · AMZN · GOOG · META · TSLA · NVDA · AMD · INTC · DUOL</b>
+        💡 TEST товч → <b>AAPL · META · TSLA · NVDA</b> гэх мэт sample data ашиглана уу
       </span>
     </div>`;
   }
   const v = document.getElementById('rverdict');
   if (v) { v.className='banner b-r vis'; v.textContent=`❌ ${ticker} — Өгөгдөл байхгүй`; }
-  document.getElementById('h-last-fetch').textContent = '❌ Амжилтгүй';
+  document.getElementById('h-last-fetch').textContent = `❌ ${mktLabel||'Амжилтгүй'}`;
 }
 
 function renderStockData(data, market) {
@@ -1163,7 +1181,13 @@ function renderStockData(data, market) {
   autoFillTimeframe();
   autoFillPosition();
   autoFillFundamentals();
-  const badge = data.source === 'sample' ? `🟡 SAMPLE ${liveData.fetchTime}` : `🟢 ${liveData.fetchTime}`;
+  const statusBadge = {
+    'LIVE_REALTIME':        `🟢 LIVE ${liveData.fetchTime}`,
+    'MARKET_CLOSED_LAST_DATA': `🔵 Хаалттай — Сүүлийн өгөгдөл ${liveData.fetchTime}`,
+    'SAMPLE_DATA':          `🟡 SAMPLE ${liveData.fetchTime}`,
+    'sample':               `🟡 SAMPLE ${liveData.fetchTime}`,
+  };
+  const badge = statusBadge[data.source] || `🟢 ${liveData.fetchTime}`;
   document.getElementById('h-last-fetch').textContent = badge;
   document.getElementById('data-live-badge').style.display = 'inline';
   const dlb = document.getElementById('dl-banner');
@@ -1177,7 +1201,7 @@ async function loadSampleData(ticker) {
   document.getElementById('h-ticker').value = ticker;
   clearUI(ticker);
   const d = SAMPLE_DATA[ticker];
-  const stock = { success:true, source:'sample', ticker, price:d.price,
+  const stock = { success:true, source:'SAMPLE_DATA', ticker, price:d.price,
     changePercent:d.change_pct, rsi:d.rsi14, atr:d.atr14,
     ema21:d.ema21, ema50:d.ema50, ema200:d.ema200,
     volRatio:d.vol_ratio, avgVol:d.avg_vol, curVol:d.cur_vol,
@@ -1219,7 +1243,7 @@ async function fetchAllData() {
     ]);
 
     if (!stockData.success) {
-      renderError(ticker, stockData.error);
+      renderError(ticker, stockData.error, stockData.marketStatus);
       return;
     }
     setFetchMsg('Тооцоолж байна...');
@@ -1315,7 +1339,7 @@ function updateDataPanel() {
     <div class="data-cell">
       <div class="data-cell-lbl">Татсан цаг</div>
       <div class="data-cell-val" style="font-size:13px;color:var(--gold);">${d.fetchTime}</div>
-      <div class="data-cell-sub">Yahoo Finance</div>
+      <div class="data-cell-sub">${liveData.dataSource==='MARKET_CLOSED_LAST_DATA'?'⏸ Сүүлийн хаалтын үнэ':liveData.dataSource==='SAMPLE_DATA'?'🧪 Sample data':'Yahoo Finance'}</div>
     </div>
     <div class="data-cell">
       <div class="data-cell-lbl">Regime</div>
